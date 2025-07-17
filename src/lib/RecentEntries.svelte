@@ -117,7 +117,7 @@
 <div class="card">
   <div class="flex items-center justify-between mb-4">
     <h3 class="text-lg font-semibold text-gray-900">Recent Entries</h3>
-    <a href="/add" class="text-primary-600 hover:text-primary-700 text-sm font-medium">
+    <a href="/dashboard/add" class="text-primary-600 hover:text-primary-700 text-sm font-medium">
       Add New Entry
     </a>
   </div>
@@ -191,7 +191,7 @@
                 </td>
                 <td class="py-3 px-4 text-center">
                   <a 
-                    href="/add?edit={entry.date}" 
+                    href="/dashboard/add?edit={entry.date}" 
                     class="inline-flex items-center justify-center w-8 h-8 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
                     title="Edit entry"
                   >
