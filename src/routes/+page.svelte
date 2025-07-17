@@ -2,9 +2,10 @@
   import { onMount } from 'svelte';
   import Chart from '$lib/Chart.svelte';
   import StatsCard from '$lib/StatsCard.svelte';
+  import RecentEntries from '$lib/RecentEntries.svelte';
   import { aggregateInvestments, calculatePortfolioStats, formatCurrency, formatDate, type AggregationPeriod, type FilterPeriod, FILTER_OPTIONS } from '$lib/utils';
   import type { PageData } from './$types';
-  import { BarChart3, Calendar, TrendingUp, TrendingDown, Edit3 } from 'lucide-svelte';
+  import { BarChart3, Calendar, TrendingUp, TrendingDown } from 'lucide-svelte';
 
   let { data }: { data: PageData } = $props();
 
@@ -126,63 +127,7 @@
       height={400}
     />
 
-    <!-- Recent Entries -->
-    <div class="card">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-semibold text-gray-900">Recent Entries</h3>
-        <a href="/add" class="text-primary-600 hover:text-primary-700 text-sm font-medium">
-          Add New Entry
-        </a>
-      </div>
-      
-      <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead>
-            <tr class="border-b border-gray-200">
-              <th class="text-left py-3 px-4 font-medium text-gray-700">Date</th>
-              <th class="text-right py-3 px-4 font-medium text-gray-700">Value</th>
-              <th class="text-right py-3 px-4 font-medium text-gray-700">Change</th>
-              <th class="text-right py-3 px-4 font-medium text-gray-700">Change %</th>
-              <th class="text-center py-3 px-4 font-medium text-gray-700">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each aggregatedData.slice(-10).reverse() as entry}
-              <tr class="border-b border-gray-100 hover:bg-gray-50">
-                <td class="py-3 px-4 text-gray-900">{formatDate(entry.date)}</td>
-                <td class="py-3 px-4 text-right font-medium text-gray-900">
-                  {formatCurrency(entry.value)}
-                </td>
-                <td class="py-3 px-4 text-right font-medium {
-                  (entry.change || 0) >= 0 ? 'text-success-600' : 'text-danger-600'
-                }">
-                  {entry.change ? 
-                    ((entry.change >= 0 ? '+' : '') + formatCurrency(entry.change)) : 
-                    '-'
-                  }
-                </td>
-                <td class="py-3 px-4 text-right font-medium {
-                  (entry.changePercent || 0) >= 0 ? 'text-success-600' : 'text-danger-600'
-                }">
-                  {entry.changePercent !== undefined ? 
-                    ((entry.changePercent >= 0 ? '+' : '') + entry.changePercent.toFixed(2) + '%') : 
-                    '-'
-                  }
-                </td>
-                <td class="py-3 px-4 text-center">
-                  <a 
-                    href="/add?edit={entry.date}" 
-                    class="inline-flex items-center justify-center w-8 h-8 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-                    title="Edit entry"
-                  >
-                    <Edit3 class="w-4 h-4" />
-                  </a>
-                </td>
-              </tr>
-            {/each}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <!-- Recent Entries with Infinite Scroll -->
+    <RecentEntries />
   {/if}
 </div>
