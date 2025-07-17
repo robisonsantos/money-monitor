@@ -1,0 +1,237 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// Create mocks before importing the database module
+const mockPreparedStatements = {
+  insertInvestment: { run: vi.fn() },
+  getInvestmentByDate: { get: vi.fn() },
+  getAllInvestments: { all: vi.fn() },
+  getInvestmentsInRange: { all: vi.fn() },
+  deleteInvestment: { run: vi.fn() },
+  getLatestInvestment: { get: vi.fn() },
+  getInvestmentsPaginated: { all: vi.fn() },
+  getInvestmentWithPrevious: { get: vi.fn() },
+  deleteAllInvestments: { run: vi.fn() }
+};
+
+const mockDb = {
+  prepare: vi.fn((query: string) => {
+    if (query.includes('INSERT OR REPLACE INTO investments')) {
+      // Both insertInvestment and bulkInsertInvestment use the same query
+      return mockPreparedStatements.insertInvestment;
+    }
+    if (query.includes('SELECT * FROM investments WHERE date = ?')) {
+      return mockPreparedStatements.getInvestmentByDate;
+    }
+    if (query.includes('SELECT * FROM investments ORDER BY date ASC')) {
+      return mockPreparedStatements.getAllInvestments;
+    }
+    if (query.includes('WHERE date >= ? AND date <= ?')) {
+      return mockPreparedStatements.getInvestmentsInRange;
+    }
+    if (query.includes('DELETE FROM investments WHERE date = ?')) {
+      return mockPreparedStatements.deleteInvestment;
+    }
+    if (query.includes('ORDER BY date DESC LIMIT 1')) {
+      return mockPreparedStatements.getLatestInvestment;
+    }
+    if (query.includes('LIMIT ? OFFSET ?')) {
+      return mockPreparedStatements.getInvestmentsPaginated;
+    }
+    if (query.includes('LEFT JOIN')) {
+      return mockPreparedStatements.getInvestmentWithPrevious;
+    }
+    if (query.includes('DELETE FROM investments') && !query.includes('WHERE')) {
+      return mockPreparedStatements.deleteAllInvestments;
+    }
+    return mockPreparedStatements.insertInvestment;
+  }),
+  exec: vi.fn(),
+  pragma: vi.fn(),
+  close: vi.fn(),
+  transaction: vi.fn((fn: () => any) => () => fn())
+};
+
+// Mock better-sqlite3 before importing database
+vi.mock('better-sqlite3', () => ({
+  default: vi.fn(() => mockDb)
+}));
+
+// Now import the database module
+const { investmentDb } = await import('./database');
+
+describe('investmentDb', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('addInvestment', () => {
+    it('should call the correct prepared statement with date and value', () => {
+      investmentDb.addInvestment('2024-01-01', 100000);
+      
+      expect(mockPreparedStatements.insertInvestment.run).toHaveBeenCalledWith('2024-01-01', 100000);
+    });
+  });
+
+  describe('getInvestment', () => {
+    it('should return investment for valid date', () => {
+      const mockInvestment = { id: 1, date: '2024-01-01', value: 100000 };
+      mockPreparedStatements.getInvestmentByDate.get.mockReturnValue(mockInvestment);
+      
+      const result = investmentDb.getInvestment('2024-01-01');
+      
+      expect(mockPreparedStatements.getInvestmentByDate.get).toHaveBeenCalledWith('2024-01-01');
+      expect(result).toEqual(mockInvestment);
+    });
+
+    it('should return undefined for non-existent investment', () => {
+      mockPreparedStatements.getInvestmentByDate.get.mockReturnValue(undefined);
+      
+      const result = investmentDb.getInvestment('2024-12-31');
+      
+      expect(result).toBeUndefined();
+    });
+  });
+
+  describe('getAllInvestments', () => {
+    it('should return all investments', () => {
+      const mockInvestments = [
+        { id: 1, date: '2024-01-01', value: 100000 },
+        { id: 2, date: '2024-01-02', value: 102000 }
+      ];
+      mockPreparedStatements.getAllInvestments.all.mockReturnValue(mockInvestments);
+      
+      const result = investmentDb.getAllInvestments();
+      
+      expect(mockPreparedStatements.getAllInvestments.all).toHaveBeenCalled();
+      expect(result).toEqual(mockInvestments);
+    });
+
+    it('should return empty array when no investments exist', () => {
+      mockPreparedStatements.getAllInvestments.all.mockReturnValue([]);
+      
+      const result = investmentDb.getAllInvestments();
+      
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('getInvestmentsInRange', () => {
+    it('should return investments within date range', () => {
+      const mockInvestments = [
+        { id: 1, date: '2024-01-01', value: 100000 },
+        { id: 2, date: '2024-01-02', value: 102000 }
+      ];
+      mockPreparedStatements.getInvestmentsInRange.all.mockReturnValue(mockInvestments);
+      
+      const result = investmentDb.getInvestmentsInRange('2024-01-01', '2024-01-02');
+      
+      expect(mockPreparedStatements.getInvestmentsInRange.all)
+        .toHaveBeenCalledWith('2024-01-01', '2024-01-02');
+      expect(result).toEqual(mockInvestments);
+    });
+  });
+
+  describe('deleteInvestment', () => {
+    it('should delete investment for given date', () => {
+      investmentDb.deleteInvestment('2024-01-01');
+      
+      expect(mockPreparedStatements.deleteInvestment.run).toHaveBeenCalledWith('2024-01-01');
+    });
+  });
+
+  describe('getLatestInvestment', () => {
+    it('should return latest investment', () => {
+      const mockInvestment = { id: 5, date: '2024-01-05', value: 105000 };
+      mockPreparedStatements.getLatestInvestment.get.mockReturnValue(mockInvestment);
+      
+      const result = investmentDb.getLatestInvestment();
+      
+      expect(mockPreparedStatements.getLatestInvestment.get).toHaveBeenCalled();
+      expect(result).toEqual(mockInvestment);
+    });
+
+    it('should return undefined when no investments exist', () => {
+      mockPreparedStatements.getLatestInvestment.get.mockReturnValue(undefined);
+      
+      const result = investmentDb.getLatestInvestment();
+      
+      expect(result).toBeUndefined();
+    });
+  });
+
+  describe('getInvestmentsPaginated', () => {
+    it('should return paginated investments', () => {
+      const mockInvestments = [
+        { id: 3, date: '2024-01-03', value: 103000 },
+        { id: 2, date: '2024-01-02', value: 102000 }
+      ];
+      mockPreparedStatements.getInvestmentsPaginated.all.mockReturnValue(mockInvestments);
+      
+      const result = investmentDb.getInvestmentsPaginated(10, 0);
+      
+      expect(mockPreparedStatements.getInvestmentsPaginated.all)
+        .toHaveBeenCalledWith(10, 0);
+      expect(result).toEqual(mockInvestments);
+    });
+  });
+
+  describe('getInvestmentWithPrevious', () => {
+    it('should return investment with previous value', () => {
+      const mockData = {
+        id: 2,
+        date: '2024-01-02',
+        value: 102000,
+        prev_value: 100000
+      };
+      mockPreparedStatements.getInvestmentWithPrevious.get.mockReturnValue(mockData);
+      
+      const result = investmentDb.getInvestmentWithPrevious('2024-01-02');
+      
+      expect(mockPreparedStatements.getInvestmentWithPrevious.get)
+        .toHaveBeenCalledWith('2024-01-02');
+      expect(result).toEqual(mockData);
+    });
+  });
+
+  describe('clearAllInvestments', () => {
+    it('should clear all investments', () => {
+      investmentDb.clearAllInvestments();
+      
+      expect(mockPreparedStatements.deleteAllInvestments.run).toHaveBeenCalled();
+    });
+  });
+
+  describe('bulkInsertInvestments', () => {
+    it('should bulk insert investments and return count', () => {
+      const investments = [
+        { date: '2024-01-01', value: 100000 },
+        { date: '2024-01-02', value: 102000 },
+        { date: '2024-01-03', value: 98000 }
+      ];
+
+      const result = investmentDb.bulkInsertInvestments(investments);
+      
+      expect(mockDb.transaction).toHaveBeenCalled();
+      expect(result).toBe(3);
+      expect(mockPreparedStatements.insertInvestment.run).toHaveBeenCalledTimes(3);
+      expect(mockPreparedStatements.insertInvestment.run).toHaveBeenCalledWith('2024-01-01', 100000);
+      expect(mockPreparedStatements.insertInvestment.run).toHaveBeenCalledWith('2024-01-02', 102000);
+      expect(mockPreparedStatements.insertInvestment.run).toHaveBeenCalledWith('2024-01-03', 98000);
+    });
+
+    it('should handle empty array', () => {
+      const result = investmentDb.bulkInsertInvestments([]);
+      
+      expect(result).toBe(0);
+      expect(mockPreparedStatements.insertInvestment.run).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('close', () => {
+    it('should close database connection', () => {
+      investmentDb.close();
+      
+      expect(mockDb.close).toHaveBeenCalled();
+    });
+  });
+}); 
