@@ -33,6 +33,7 @@
   let hasMore = $state(true);
   let error = $state('');
   let sentinelElement = $state<HTMLDivElement>();
+  let scrollContainer = $state<HTMLDivElement>();
   // Remove debug status for production
   // let debugStatus = $state(`Server loaded ${initialEntries.length} entries`);
 
@@ -73,7 +74,7 @@
   }
 
   function setupIntersectionObserver() {
-    if (!sentinelElement) return;
+    if (!sentinelElement || !scrollContainer) return;
 
     const observer = new IntersectionObserver(
       (observerEntries) => {
@@ -85,7 +86,8 @@
         }
       },
       {
-        rootMargin: '100px', // Start loading when 100px away from the sentinel
+        root: scrollContainer, // Use the scroll container as the root instead of viewport
+        rootMargin: '50px', // Start loading when 50px away from the sentinel
         threshold: 0.1
       }
     );
@@ -99,14 +101,14 @@
 
   // Set up intersection observer for infinite scroll
   $effect(() => {
-    if (sentinelElement) {
+    if (sentinelElement && scrollContainer) {
       return setupIntersectionObserver();
     }
   });
 
   // Re-setup observer when sentinel element changes
   $effect(() => {
-    if (sentinelElement && entries.length > 0) {
+    if (sentinelElement && scrollContainer && entries.length > 0) {
       return setupIntersectionObserver();
     }
   });
@@ -133,9 +135,13 @@
       </button>
     </div>
   {:else}
-    <div class="overflow-x-auto">
+    <!-- Fixed height scrollable container -->
+    <div 
+      bind:this={scrollContainer}
+      class="h-96 overflow-y-auto overflow-x-auto border border-gray-200 rounded-lg"
+    >
       <table class="w-full">
-        <thead>
+        <thead class="bg-gray-50 sticky top-0">
           <tr class="border-b border-gray-200">
             <th class="text-left py-3 px-4 font-medium text-gray-700">Date</th>
             <th class="text-right py-3 px-4 font-medium text-gray-700">Value</th>
@@ -197,22 +203,22 @@
           {/if}
         </tbody>
       </table>
-    </div>
 
-    <!-- Infinite scroll sentinel and loading indicator -->
-    {#if entries.length > 0}
-      <div bind:this={sentinelElement} class="py-4">
-        {#if isLoadingMore}
-          <div class="flex items-center justify-center space-x-2">
-            <Loader class="w-4 h-4 animate-spin text-primary-600" />
-            <span class="text-sm text-gray-600">Loading more entries...</span>
-          </div>
-        {:else if !hasMore}
-          <div class="text-center text-sm text-gray-500">
-            You've reached the end of your investment history
-          </div>
-        {/if}
-      </div>
-    {/if}
+      <!-- Infinite scroll sentinel and loading indicator inside the scroll container -->
+      {#if entries.length > 0}
+        <div bind:this={sentinelElement} class="py-4 bg-white">
+          {#if isLoadingMore}
+            <div class="flex items-center justify-center space-x-2">
+              <Loader class="w-4 h-4 animate-spin text-primary-600" />
+              <span class="text-sm text-gray-600">Loading more entries...</span>
+            </div>
+          {:else if !hasMore}
+            <div class="text-center text-sm text-gray-500">
+              You've reached the end of your investment history
+            </div>
+          {/if}
+        </div>
+      {/if}
+    </div>
   {/if}
 </div> 
