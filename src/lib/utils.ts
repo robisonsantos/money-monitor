@@ -274,3 +274,105 @@ export function formatPercent(value: number): string {
 export function formatDate(date: string): string {
   return format(parseISO(date), 'MMM dd, yyyy');
 }
+
+export interface CSVRow {
+  date: string;
+  value: number;
+}
+
+export interface CSVValidationResult {
+  isValid: boolean;
+  data: CSVRow[];
+  errors: string[];
+}
+
+export function parseCSV(csvContent: string): CSVValidationResult {
+  const lines = csvContent.trim().split('\n');
+  const errors: string[] = [];
+  const data: CSVRow[] = [];
+
+  if (lines.length === 0) {
+    return { isValid: false, data: [], errors: ['CSV file is empty'] };
+  }
+
+  // Check for header (optional - we'll handle both with and without header)
+  let startIndex = 0;
+  const firstLine = lines[0].toLowerCase();
+  if (firstLine.includes('date') && firstLine.includes('value')) {
+    startIndex = 1; // Skip header
+  }
+
+  if (lines.length === startIndex) {
+    return { isValid: false, data: [], errors: ['CSV file has no data rows'] };
+  }
+
+  for (let i = startIndex; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue; // Skip empty lines
+
+    const columns = line.split(',').map(col => col.trim().replace(/"/g, ''));
+    
+    if (columns.length !== 2) {
+      errors.push(`Row ${i + 1}: Expected 2 columns (date, value), got ${columns.length}`);
+      continue;
+    }
+
+    const [dateStr, valueStr] = columns;
+
+    // Validate date format
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(dateStr)) {
+      errors.push(`Row ${i + 1}: Invalid date format "${dateStr}". Expected YYYY-MM-DD`);
+      continue;
+    }
+
+    // Validate date is a real date
+    try {
+      const parsedDate = parseISO(dateStr);
+      if (isNaN(parsedDate.getTime())) {
+        errors.push(`Row ${i + 1}: Invalid date "${dateStr}"`);
+        continue;
+      }
+    } catch {
+      errors.push(`Row ${i + 1}: Invalid date "${dateStr}"`);
+      continue;
+    }
+
+    // Validate value
+    const value = parseFloat(valueStr);
+    if (isNaN(value) || value < 0) {
+      errors.push(`Row ${i + 1}: Invalid value "${valueStr}". Must be a positive number`);
+      continue;
+    }
+
+    data.push({ date: dateStr, value });
+  }
+
+  return {
+    isValid: errors.length === 0,
+    data,
+    errors
+  };
+}
+
+export function generateCSV(investments: { date: string; value: number }[]): string {
+  const header = 'Date,Value\n';
+  const rows = investments.map(inv => `${inv.date},${inv.value}`).join('\n');
+  return header + rows;
+}
+
+export function downloadCSV(content: string, filename: string): void {
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+}

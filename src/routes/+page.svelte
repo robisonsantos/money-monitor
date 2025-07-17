@@ -3,6 +3,7 @@
   import Chart from '$lib/Chart.svelte';
   import StatsCard from '$lib/StatsCard.svelte';
   import RecentEntries from '$lib/RecentEntries.svelte';
+  import CSVManager from '$lib/CSVManager.svelte';
   import { aggregateInvestments, calculatePortfolioStats, calculateFilteredPortfolioStats, formatCurrency, formatDate, type AggregationPeriod, type FilterPeriod, FILTER_OPTIONS } from '$lib/utils';
   import type { PageData } from './$types';
   import { BarChart3, Calendar, TrendingUp, TrendingDown } from 'lucide-svelte';
@@ -13,6 +14,7 @@
   let selectedFilter: FilterPeriod = $state('7d'); // Default to first daily option
   let aggregatedData = $derived(aggregateInvestments(data.investments, selectedPeriod, selectedFilter));
   let portfolioStats = $derived(calculateFilteredPortfolioStats(aggregatedData));
+  let recentEntriesKey = $state(0); // Key to force refresh of RecentEntries
 
   // Helper function to get default filter for each period
   function getDefaultFilter(period: AggregationPeriod): FilterPeriod {
@@ -29,6 +31,12 @@
     const period = selectedPeriod;
     selectedFilter = getDefaultFilter(period);
   });
+
+  // Refresh data after CSV import
+  function handleImportSuccess() {
+    // Force page reload to refresh all data
+    window.location.reload();
+  }
 
   const periodOptions = [
     { value: 'daily', label: 'Daily' },
@@ -76,6 +84,11 @@
             {/each}
           </select>
         </div>
+        <CSVManager
+          selectedPeriod={selectedPeriod}
+          selectedFilter={selectedFilter}
+          onImportSuccess={handleImportSuccess}
+        />
       </div>
     {/if}
   </div>
