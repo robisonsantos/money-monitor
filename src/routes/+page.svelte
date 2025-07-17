@@ -64,16 +64,26 @@
           <TrendingUp class="h-8 w-8 text-blue-600" />
           <span class="text-2xl font-bold text-gray-900">Money Monitor</span>
         </div>
-        <div class="hidden md:flex items-center space-x-6">
-          <a href="#features" class="text-gray-600 hover:text-blue-600 transition-colors">Features</a>
-          <a href="#benefits" class="text-gray-600 hover:text-blue-600 transition-colors">Benefits</a>
-          <button 
-            onclick={() => document.getElementById('auth-section')?.scrollIntoView({ behavior: 'smooth' })}
-            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Get Started
-          </button>
-        </div>
+                 <div class="hidden md:flex items-center space-x-6">
+           <button 
+             onclick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
+             class="text-gray-600 hover:text-blue-600 transition-colors"
+           >
+             Features
+           </button>
+           <button 
+             onclick={() => document.getElementById('benefits')?.scrollIntoView({ behavior: 'smooth' })}
+             class="text-gray-600 hover:text-blue-600 transition-colors"
+           >
+             Benefits
+           </button>
+           <button 
+             onclick={() => document.getElementById('auth-section')?.scrollIntoView({ behavior: 'smooth' })}
+             class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+           >
+             Get Started
+           </button>
+         </div>
       </div>
     </nav>
 
