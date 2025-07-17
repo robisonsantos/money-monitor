@@ -1,6 +1,59 @@
 import Database from 'better-sqlite3';
 import { dev } from '$app/environment';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
+
+// Encryption configuration
+const ENCRYPTION_ALGORITHM = 'aes-256-gcm';
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'your-32-byte-secret-key-here-for-dev!'; // In production, use a proper 32-byte key
+
+// Encryption utilities
+function encryptValue(value: number): string {
+  const iv = crypto.randomBytes(16);
+  const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
+  const cipher = crypto.createCipheriv(ENCRYPTION_ALGORITHM, key, iv);
+  cipher.setAAD(Buffer.from('investment-value', 'utf8'));
+  
+  let encrypted = cipher.update(value.toString(), 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  
+  const authTag = cipher.getAuthTag();
+  
+  // Combine IV, auth tag, and encrypted data
+  return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
+}
+
+function decryptValue(encryptedValue: string): number {
+  try {
+    const [ivHex, authTagHex, encrypted] = encryptedValue.split(':');
+    
+    if (!ivHex || !authTagHex || !encrypted) {
+      throw new Error('Invalid encrypted value format');
+    }
+    
+    const iv = Buffer.from(ivHex, 'hex');
+    const authTag = Buffer.from(authTagHex, 'hex');
+    const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
+    
+    const decipher = crypto.createDecipheriv(ENCRYPTION_ALGORITHM, key, iv);
+    decipher.setAAD(Buffer.from('investment-value', 'utf8'));
+    decipher.setAuthTag(authTag);
+    
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    
+    return parseFloat(decrypted);
+  } catch (error) {
+    console.error('Decryption failed:', error);
+    // If decryption fails, it might be an unencrypted value from before migration
+    // Try to parse as number directly
+    const numValue = parseFloat(encryptedValue);
+    if (!isNaN(numValue)) {
+      return numValue;
+    }
+    throw new Error('Failed to decrypt investment value');
+  }
+}
 
 const db = new Database(dev ? 'data.db' : 'data.db');
 
@@ -30,11 +83,13 @@ db.exec(`
   )
 `);
 
-// Migration function to add user support
-async function migrateToMultiUser() {
-  const investmentsColumns = db.prepare("PRAGMA table_info(investments)").all();
-  const hasUserId = investmentsColumns.some((col: any) => col.name === 'user_id');
+// Migration function to add user support and encryption
+async function migrateToMultiUserAndEncryption() {
+  const investmentsColumns = db.prepare("PRAGMA table_info(investments)").all() as Array<{name: string, type: string}>;
+  const hasUserId = investmentsColumns.some((col) => col.name === 'user_id');
+  const valueColumn = investmentsColumns.find((col) => col.name === 'value');
 
+  // First, handle user migration
   if (!hasUserId) {
     // Add user_id column if it doesn't exist
     db.exec(`ALTER TABLE investments ADD COLUMN user_id INTEGER REFERENCES users(id)`);
@@ -55,24 +110,68 @@ async function migrateToMultiUser() {
       db.exec(`UPDATE investments SET user_id = ${userId} WHERE user_id IS NULL`);
     }
     
-    // Update the unique constraint to include user_id
+    console.log('Migration completed: Added user support to investments table');
+  }
+
+  // Handle encryption migration (change REAL to TEXT and encrypt existing values)
+  if (valueColumn && valueColumn.type === 'REAL') {
+    console.log('Starting encryption migration for investment values...');
+    
+    // Create new table with encrypted value column
     db.exec(`
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_investments_user_date_unique 
-      ON investments(user_id, date)
+      CREATE TABLE investments_encrypted (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER REFERENCES users(id),
+        date TEXT NOT NULL,
+        value TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
     `);
     
-    // Drop the old unique constraint on date only (if exists)
-    try {
-      db.exec(`DROP INDEX IF EXISTS sqlite_autoindex_investments_1`);
-    } catch (e) {
-      // Index might not exist, that's fine
+    // Migrate and encrypt existing data
+    const existingInvestments = db.prepare("SELECT * FROM investments").all();
+    const insertEncrypted = db.prepare(`
+      INSERT INTO investments_encrypted (id, user_id, date, value, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+    
+    for (const investment of existingInvestments as any[]) {
+      const encryptedValue = encryptValue(investment.value);
+      insertEncrypted.run(
+        investment.id,
+        investment.user_id,
+        investment.date,
+        encryptedValue,
+        investment.created_at,
+        investment.updated_at
+      );
     }
+    
+    // Replace old table with new encrypted table
+    db.exec(`DROP TABLE investments`);
+    db.exec(`ALTER TABLE investments_encrypted RENAME TO investments`);
+    
+    console.log(`Migration completed: Encrypted ${existingInvestments.length} investment values`);
+  }
+  
+  // Create indexes after migration
+  db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_investments_user_date_unique 
+    ON investments(user_id, date)
+  `);
+  
+  // Drop the old unique constraint on date only (if exists)
+  try {
+    db.exec(`DROP INDEX IF EXISTS sqlite_autoindex_investments_1`);
+  } catch (e) {
+    // Index might not exist, that's fine
   }
 }
 
 // Run migration on startup (in dev mode, will be called when app starts)
 if (dev) {
-  migrateToMultiUser().catch(console.error);
+  migrateToMultiUserAndEncryption().catch(console.error);
 }
 
 // Create indexes for better performance
@@ -205,22 +304,35 @@ export const userDb = {
 export const investmentDb = {
   // Add or update an investment (user-scoped)
   addInvestment: (userId: number, date: string, value: number): void => {
-    insertInvestment.run(userId, date, value);
+    const encryptedValue = encryptValue(value);
+    insertInvestment.run(userId, date, encryptedValue);
   },
 
-  // Get investment by date (user-scoped)
+  // Get investment by date (user-scoped) - decrypts value after retrieval
   getInvestment: (userId: number, date: string): Investment | undefined => {
-    return getInvestmentByDate.get(userId, date) as Investment | undefined;
+    const result = getInvestmentByDate.get(userId, date) as Investment | undefined;
+    if (result) {
+      result.value = decryptValue(result.value as any);
+    }
+    return result;
   },
 
-  // Get all investments (user-scoped)
+  // Get all investments (user-scoped) - decrypts values after retrieval
   getAllInvestments: (userId: number): Investment[] => {
-    return getAllInvestments.all(userId) as Investment[];
+    const results = getAllInvestments.all(userId) as Investment[];
+    return results.map(investment => ({
+      ...investment,
+      value: decryptValue(investment.value as any)
+    }));
   },
 
-  // Get investments in date range (user-scoped)
+  // Get investments in date range (user-scoped) - decrypts values after retrieval
   getInvestmentsInRange: (userId: number, startDate: string, endDate: string): Investment[] => {
-    return getInvestmentsInRange.all(userId, startDate, endDate) as Investment[];
+    const results = getInvestmentsInRange.all(userId, startDate, endDate) as Investment[];
+    return results.map(investment => ({
+      ...investment,
+      value: decryptValue(investment.value as any)
+    }));
   },
 
   // Delete investment (user-scoped)
@@ -228,19 +340,32 @@ export const investmentDb = {
     deleteInvestment.run(userId, date);
   },
 
-  // Get latest investment (user-scoped)
+  // Get latest investment (user-scoped) - decrypts value after retrieval
   getLatestInvestment: (userId: number): Investment | undefined => {
-    return getLatestInvestment.get(userId) as Investment | undefined;
+    const result = getLatestInvestment.get(userId) as Investment | undefined;
+    if (result) {
+      result.value = decryptValue(result.value as any);
+    }
+    return result;
   },
 
-  // Get investments with pagination (newest first, user-scoped)
+  // Get investments with pagination (newest first, user-scoped) - decrypts values after retrieval
   getInvestmentsPaginated: (userId: number, limit: number, offset: number): Investment[] => {
-    return getInvestmentsPaginated.all(userId, limit, offset) as Investment[];
+    const results = getInvestmentsPaginated.all(userId, limit, offset) as Investment[];
+    return results.map(investment => ({
+      ...investment,
+      value: decryptValue(investment.value as any)
+    }));
   },
 
-  // Get investment with previous value for change calculation (user-scoped)
+  // Get investment with previous value for change calculation (user-scoped) - decrypts values after retrieval
   getInvestmentWithPrevious: (userId: number, date: string): any => {
-    return getInvestmentWithPrevious.get(userId, date);
+    const result = getInvestmentWithPrevious.get(userId, date) as any;
+    if (result) {
+      if (result.value) result.value = decryptValue(result.value);
+      if (result.prev_value) result.prev_value = decryptValue(result.prev_value);
+    }
+    return result;
   },
 
   // Clear all investments for a user
@@ -248,12 +373,13 @@ export const investmentDb = {
     deleteAllInvestments.run(userId);
   },
 
-  // Bulk insert investments (for CSV import, user-scoped)
+  // Bulk insert investments (for CSV import, user-scoped) - encrypts values before storing
   bulkInsertInvestments: (userId: number, investments: Array<{ date: string; value: number }>): number => {
     const transaction = db.transaction(() => {
       let insertedCount = 0;
       for (const investment of investments) {
-        bulkInsertInvestment.run(userId, investment.date, investment.value);
+        const encryptedValue = encryptValue(investment.value);
+        bulkInsertInvestment.run(userId, investment.date, encryptedValue);
         insertedCount++;
       }
       return insertedCount;
@@ -269,7 +395,7 @@ export const investmentDb = {
 };
 
 // Export migration function for testing
-export { migrateToMultiUser };
+export { migrateToMultiUserAndEncryption };
 
 // Graceful shutdown
 process.on('exit', () => db.close());

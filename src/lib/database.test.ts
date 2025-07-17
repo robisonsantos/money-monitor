@@ -68,22 +68,29 @@ describe('investmentDb', () => {
   });
 
   describe('addInvestment', () => {
-    it('should call the correct prepared statement with user ID, date and value', () => {
+    it('should call the correct prepared statement with user ID, date and encrypted value', () => {
       investmentDb.addInvestment(TEST_USER_ID, '2024-01-01', 100000);
       
-      expect(mockPreparedStatements.insertInvestment.run).toHaveBeenCalledWith(TEST_USER_ID, '2024-01-01', 100000);
+      // Check that the function was called with user ID, date, and an encrypted value (string)
+      expect(mockPreparedStatements.insertInvestment.run).toHaveBeenCalledWith(
+        TEST_USER_ID, 
+        '2024-01-01', 
+        expect.stringMatching(/^[a-f0-9]{32}:[a-f0-9]{32}:[a-f0-9]+$/) // Encrypted format: iv:authTag:encrypted
+      );
     });
   });
 
   describe('getInvestment', () => {
     it('should return investment for valid date', () => {
-      const mockInvestment = { id: 1, user_id: TEST_USER_ID, date: '2024-01-01', value: 100000 };
-      mockPreparedStatements.getInvestmentByDate.get.mockReturnValue(mockInvestment);
+      // Mock returns encrypted value from database, should be decrypted by the function
+      const mockInvestmentFromDb = { id: 1, user_id: TEST_USER_ID, date: '2024-01-01', value: '100000' }; // Fallback to number parsing
+      const expectedResult = { id: 1, user_id: TEST_USER_ID, date: '2024-01-01', value: 100000 };
+      mockPreparedStatements.getInvestmentByDate.get.mockReturnValue(mockInvestmentFromDb);
       
       const result = investmentDb.getInvestment(TEST_USER_ID, '2024-01-01');
       
       expect(mockPreparedStatements.getInvestmentByDate.get).toHaveBeenCalledWith(TEST_USER_ID, '2024-01-01');
-      expect(result).toEqual(mockInvestment);
+      expect(result).toEqual(expectedResult);
     });
 
     it('should return undefined for non-existent investment', () => {
@@ -97,16 +104,20 @@ describe('investmentDb', () => {
 
   describe('getAllInvestments', () => {
     it('should return all investments', () => {
-      const mockInvestments = [
+      const mockInvestmentsFromDb = [
+        { id: 1, date: '2024-01-01', value: '100000' },
+        { id: 2, date: '2024-01-02', value: '102000' }
+      ];
+      const expectedResult = [
         { id: 1, date: '2024-01-01', value: 100000 },
         { id: 2, date: '2024-01-02', value: 102000 }
       ];
-      mockPreparedStatements.getAllInvestments.all.mockReturnValue(mockInvestments);
+      mockPreparedStatements.getAllInvestments.all.mockReturnValue(mockInvestmentsFromDb);
       
       const result = investmentDb.getAllInvestments(TEST_USER_ID);
       
       expect(mockPreparedStatements.getAllInvestments.all).toHaveBeenCalledWith(TEST_USER_ID);
-      expect(result).toEqual(mockInvestments);
+      expect(result).toEqual(expectedResult);
     });
 
     it('should return empty array when no investments exist', () => {
@@ -217,9 +228,22 @@ describe('investmentDb', () => {
       expect(mockDb.transaction).toHaveBeenCalled();
       expect(result).toBe(3);
       expect(mockPreparedStatements.insertInvestment.run).toHaveBeenCalledTimes(3);
-      expect(mockPreparedStatements.insertInvestment.run).toHaveBeenCalledWith(TEST_USER_ID, '2024-01-01', 100000);
-      expect(mockPreparedStatements.insertInvestment.run).toHaveBeenCalledWith(TEST_USER_ID, '2024-01-02', 102000);
-      expect(mockPreparedStatements.insertInvestment.run).toHaveBeenCalledWith(TEST_USER_ID, '2024-01-03', 98000);
+      // Check that values were encrypted before insertion
+      expect(mockPreparedStatements.insertInvestment.run).toHaveBeenCalledWith(
+        TEST_USER_ID, 
+        '2024-01-01', 
+        expect.stringMatching(/^[a-f0-9]{32}:[a-f0-9]{32}:[a-f0-9]+$/)
+      );
+      expect(mockPreparedStatements.insertInvestment.run).toHaveBeenCalledWith(
+        TEST_USER_ID, 
+        '2024-01-02', 
+        expect.stringMatching(/^[a-f0-9]{32}:[a-f0-9]{32}:[a-f0-9]+$/)
+      );
+      expect(mockPreparedStatements.insertInvestment.run).toHaveBeenCalledWith(
+        TEST_USER_ID, 
+        '2024-01-03', 
+        expect.stringMatching(/^[a-f0-9]{32}:[a-f0-9]{32}:[a-f0-9]+$/)
+      );
     });
 
     it('should handle empty array', () => {
