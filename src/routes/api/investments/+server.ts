@@ -2,9 +2,14 @@ import { json } from '@sveltejs/kit';
 import { investmentDb } from '$lib/database';
 import type { RequestHandler } from './$types';
 
-export const GET: RequestHandler = async () => {
+export const GET: RequestHandler = async ({ locals }) => {
   try {
-    const investments = investmentDb.getAllInvestments();
+    // Check if user is authenticated
+    if (!locals.user) {
+      return json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    const investments = investmentDb.getAllInvestments(locals.user.id);
     return json(investments);
   } catch (error) {
     console.error('Error fetching investments:', error);
@@ -12,8 +17,13 @@ export const GET: RequestHandler = async () => {
   }
 };
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
   try {
+    // Check if user is authenticated
+    if (!locals.user) {
+      return json({ error: 'Authentication required' }, { status: 401 });
+    }
+
     const { date, value } = await request.json();
     
     if (!date || value === undefined) {
@@ -30,8 +40,8 @@ export const POST: RequestHandler = async ({ request }) => {
       return json({ error: 'Date must be in YYYY-MM-DD format' }, { status: 400 });
     }
 
-    // Check if investment already exists for this date
-    const existingInvestment = investmentDb.getInvestment(date);
+    // Check if investment already exists for this date (user-scoped)
+    const existingInvestment = investmentDb.getInvestment(locals.user.id, date);
     if (existingInvestment) {
       return json({ 
         error: `An investment entry already exists for ${date}. Use the edit functionality to update it.`,
@@ -39,8 +49,8 @@ export const POST: RequestHandler = async ({ request }) => {
       }, { status: 409 }); // 409 Conflict
     }
 
-    investmentDb.addInvestment(date, value);
-    const investment = investmentDb.getInvestment(date);
+    investmentDb.addInvestment(locals.user.id, date, value);
+    const investment = investmentDb.getInvestment(locals.user.id, date);
     
     return json(investment, { status: 201 });
   } catch (error) {
@@ -49,8 +59,13 @@ export const POST: RequestHandler = async ({ request }) => {
   }
 };
 
-export const PUT: RequestHandler = async ({ request }) => {
+export const PUT: RequestHandler = async ({ request, locals }) => {
   try {
+    // Check if user is authenticated
+    if (!locals.user) {
+      return json({ error: 'Authentication required' }, { status: 401 });
+    }
+
     const { date, value } = await request.json();
     
     if (!date || value === undefined) {
@@ -67,14 +82,14 @@ export const PUT: RequestHandler = async ({ request }) => {
       return json({ error: 'Date must be in YYYY-MM-DD format' }, { status: 400 });
     }
 
-    // Check if investment exists
-    const existingInvestment = investmentDb.getInvestment(date);
+    // Check if investment exists (user-scoped)
+    const existingInvestment = investmentDb.getInvestment(locals.user.id, date);
     if (!existingInvestment) {
       return json({ error: 'Investment not found for this date' }, { status: 404 });
     }
 
-    investmentDb.addInvestment(date, value); // This will update the existing entry
-    const updatedInvestment = investmentDb.getInvestment(date);
+    investmentDb.addInvestment(locals.user.id, date, value); // This will update the existing entry
+    const updatedInvestment = investmentDb.getInvestment(locals.user.id, date);
     
     return json(updatedInvestment, { status: 200 });
   } catch (error) {

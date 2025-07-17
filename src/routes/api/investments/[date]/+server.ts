@@ -2,10 +2,15 @@ import { json } from '@sveltejs/kit';
 import { investmentDb } from '$lib/database';
 import type { RequestHandler } from './$types';
 
-export const GET: RequestHandler = async ({ params }) => {
+export const GET: RequestHandler = async ({ params, locals }) => {
   try {
+    // Check if user is authenticated
+    if (!locals.user) {
+      return json({ error: 'Authentication required' }, { status: 401 });
+    }
+
     const { date } = params;
-    const investment = investmentDb.getInvestment(date);
+    const investment = investmentDb.getInvestment(locals.user.id, date);
     
     if (!investment) {
       return json({ error: 'Investment not found' }, { status: 404 });
@@ -18,16 +23,21 @@ export const GET: RequestHandler = async ({ params }) => {
   }
 };
 
-export const DELETE: RequestHandler = async ({ params }) => {
+export const DELETE: RequestHandler = async ({ params, locals }) => {
   try {
+    // Check if user is authenticated
+    if (!locals.user) {
+      return json({ error: 'Authentication required' }, { status: 401 });
+    }
+
     const { date } = params;
-    const investment = investmentDb.getInvestment(date);
+    const investment = investmentDb.getInvestment(locals.user.id, date);
     
     if (!investment) {
       return json({ error: 'Investment not found' }, { status: 404 });
     }
     
-    investmentDb.deleteInvestment(date);
+    investmentDb.deleteInvestment(locals.user.id, date);
     return json({ message: 'Investment deleted successfully' });
   } catch (error) {
     console.error('Error deleting investment:', error);

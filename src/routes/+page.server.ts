@@ -1,31 +1,12 @@
-import { investmentDb } from '$lib/database';
+import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async () => {
-  const investments = investmentDb.getAllInvestments();
+export const load: PageServerLoad = async ({ locals }) => {
+  // If user is already authenticated, redirect to dashboard
+  if (locals.user) {
+    throw redirect(302, '/dashboard');
+  }
   
-  // Load recent entries for the infinite scroll component
-  const recentEntries = investmentDb.getInvestmentsPaginated(20, 0);
-  
-  // Calculate changes for recent entries
-  const enrichedEntries = recentEntries.map((investment, index) => {
-    const investmentWithPrevious = investmentDb.getInvestmentWithPrevious(investment.date);
-    const change = investmentWithPrevious?.prev_value 
-      ? investment.value - investmentWithPrevious.prev_value 
-      : 0;
-    const changePercent = investmentWithPrevious?.prev_value 
-      ? (change / investmentWithPrevious.prev_value) * 100 
-      : 0;
-    
-    return {
-      ...investment,
-      change,
-      changePercent
-    };
-  });
-  
-  return {
-    investments,
-    recentEntries: enrichedEntries
-  };
+  // Return empty data for landing page
+  return {};
 };

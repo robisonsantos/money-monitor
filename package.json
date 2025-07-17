@@ -38,8 +38,11 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "bcrypt": "^6.0.0",
     "better-sqlite3": "^11.5.0",
     "chart.js": "^4.4.6",
+    "cookie": "^1.0.2",
     "date-fns": "^4.1.0",
     "lucide-svelte": "^0.468.0"
   }

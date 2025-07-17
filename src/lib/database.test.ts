@@ -19,28 +19,28 @@ const mockDb = {
       // Both insertInvestment and bulkInsertInvestment use the same query
       return mockPreparedStatements.insertInvestment;
     }
-    if (query.includes('SELECT * FROM investments WHERE date = ?')) {
+    if (query.includes('SELECT * FROM investments WHERE user_id = ? AND date = ?')) {
       return mockPreparedStatements.getInvestmentByDate;
     }
-    if (query.includes('SELECT * FROM investments ORDER BY date ASC')) {
+    if (query.includes('SELECT * FROM investments WHERE user_id = ? ORDER BY date ASC')) {
       return mockPreparedStatements.getAllInvestments;
     }
-    if (query.includes('WHERE date >= ? AND date <= ?')) {
+    if (query.includes('WHERE user_id = ? AND date >= ? AND date <= ?')) {
       return mockPreparedStatements.getInvestmentsInRange;
     }
-    if (query.includes('DELETE FROM investments WHERE date = ?')) {
+    if (query.includes('DELETE FROM investments WHERE user_id = ? AND date = ?')) {
       return mockPreparedStatements.deleteInvestment;
     }
-    if (query.includes('ORDER BY date DESC LIMIT 1')) {
+    if (query.includes('WHERE user_id = ? ORDER BY date DESC LIMIT 1')) {
       return mockPreparedStatements.getLatestInvestment;
     }
-    if (query.includes('LIMIT ? OFFSET ?')) {
+    if (query.includes('WHERE user_id = ?') && query.includes('LIMIT ? OFFSET ?')) {
       return mockPreparedStatements.getInvestmentsPaginated;
     }
-    if (query.includes('LEFT JOIN')) {
+    if (query.includes('LEFT JOIN') && query.includes('WHERE curr.user_id = ?')) {
       return mockPreparedStatements.getInvestmentWithPrevious;
     }
-    if (query.includes('DELETE FROM investments') && !query.includes('WHERE')) {
+    if (query.includes('DELETE FROM investments WHERE user_id = ?')) {
       return mockPreparedStatements.deleteAllInvestments;
     }
     return mockPreparedStatements.insertInvestment;
@@ -60,26 +60,28 @@ vi.mock('better-sqlite3', () => ({
 const { investmentDb } = await import('./database');
 
 describe('investmentDb', () => {
+  const TEST_USER_ID = 1; // Test user ID for all operations
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   describe('addInvestment', () => {
-    it('should call the correct prepared statement with date and value', () => {
-      investmentDb.addInvestment('2024-01-01', 100000);
+    it('should call the correct prepared statement with user ID, date and value', () => {
+      investmentDb.addInvestment(TEST_USER_ID, '2024-01-01', 100000);
       
-      expect(mockPreparedStatements.insertInvestment.run).toHaveBeenCalledWith('2024-01-01', 100000);
+      expect(mockPreparedStatements.insertInvestment.run).toHaveBeenCalledWith(TEST_USER_ID, '2024-01-01', 100000);
     });
   });
 
   describe('getInvestment', () => {
     it('should return investment for valid date', () => {
-      const mockInvestment = { id: 1, date: '2024-01-01', value: 100000 };
+      const mockInvestment = { id: 1, user_id: TEST_USER_ID, date: '2024-01-01', value: 100000 };
       mockPreparedStatements.getInvestmentByDate.get.mockReturnValue(mockInvestment);
       
-      const result = investmentDb.getInvestment('2024-01-01');
+      const result = investmentDb.getInvestment(TEST_USER_ID, '2024-01-01');
       
-      expect(mockPreparedStatements.getInvestmentByDate.get).toHaveBeenCalledWith('2024-01-01');
+      expect(mockPreparedStatements.getInvestmentByDate.get).toHaveBeenCalledWith(TEST_USER_ID, '2024-01-01');
       expect(result).toEqual(mockInvestment);
     });
 
