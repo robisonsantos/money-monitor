@@ -72,6 +72,11 @@ const deleteAllInvestments = db.prepare(`
   DELETE FROM investments
 `);
 
+const bulkInsertInvestment = db.prepare(`
+  INSERT OR REPLACE INTO investments (date, value, updated_at)
+  VALUES (?, ?, CURRENT_TIMESTAMP)
+`);
+
 export interface Investment {
   id: number;
   date: string;
@@ -124,6 +129,20 @@ export const investmentDb = {
   // Clear all investments
   clearAllInvestments: (): void => {
     deleteAllInvestments.run();
+  },
+
+  // Bulk insert investments (for CSV import)
+  bulkInsertInvestments: (investments: Array<{ date: string; value: number }>): number => {
+    const transaction = db.transaction(() => {
+      let insertedCount = 0;
+      for (const investment of investments) {
+        bulkInsertInvestment.run(investment.date, investment.value);
+        insertedCount++;
+      }
+      return insertedCount;
+    });
+    
+    return transaction();
   },
 
   // Close database connection
