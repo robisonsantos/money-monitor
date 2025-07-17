@@ -10,17 +10,23 @@
   let { data }: { data: PageData } = $props();
 
   let selectedPeriod: AggregationPeriod = $state('daily');
-  let selectedFilter: FilterPeriod = $state('all');
+  let selectedFilter: FilterPeriod = $state('7d'); // Default to first daily option
   let aggregatedData = $derived(aggregateInvestments(data.investments, selectedPeriod, selectedFilter));
   let portfolioStats = $derived(calculatePortfolioStats(data.investments));
 
-  // Reset filter when period changes
-  let prevPeriod: AggregationPeriod = $state(selectedPeriod);
+  // Helper function to get default filter for each period
+  function getDefaultFilter(period: AggregationPeriod): FilterPeriod {
+    const defaultFilters = {
+      daily: '7d',
+      weekly: '4w', 
+      monthly: '3m'
+    } as const;
+    return defaultFilters[period];
+  }
+
+  // Set default filter when period changes
   $effect(() => {
-    if (prevPeriod !== selectedPeriod) {
-      selectedFilter = 'all';
-      prevPeriod = selectedPeriod;
-    }
+    selectedFilter = getDefaultFilter(selectedPeriod);
   });
 
   const periodOptions = [
