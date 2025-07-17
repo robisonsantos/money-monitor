@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import Chart from '$lib/Chart.svelte';
-  import StatsCard from '$lib/StatsCard.svelte';
-  import RecentEntries from '$lib/RecentEntries.svelte';
-  import CSVManager from '$lib/CSVManager.svelte';
+  import Chart from '$lib/components/Chart.svelte';
+  import StatsCard from '$lib/components/StatsCard.svelte';
+  import RecentEntries from '$lib/components/RecentEntries.svelte';
+  import CSVManager from '$lib/components/CSVManager.svelte';
   import { aggregateInvestments, calculatePortfolioStats, calculateFilteredPortfolioStats, formatCurrency, formatDate, type AggregationPeriod, type FilterPeriod, FILTER_OPTIONS } from '$lib/utils';
   import type { PageData } from './$types';
   import { BarChart3, Calendar, TrendingUp, TrendingDown } from 'lucide-svelte';
