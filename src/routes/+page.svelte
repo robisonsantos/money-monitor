@@ -4,7 +4,7 @@
   import StatsCard from '$lib/StatsCard.svelte';
   import { aggregateInvestments, calculatePortfolioStats, formatCurrency, formatDate, type AggregationPeriod, type FilterPeriod, FILTER_OPTIONS } from '$lib/utils';
   import type { PageData } from './$types';
-  import { BarChart3, Calendar, TrendingUp, TrendingDown } from 'lucide-svelte';
+  import { BarChart3, Calendar, TrendingUp, TrendingDown, Edit3 } from 'lucide-svelte';
 
   let { data }: { data: PageData } = $props();
 
@@ -143,6 +143,7 @@
               <th class="text-right py-3 px-4 font-medium text-gray-700">Value</th>
               <th class="text-right py-3 px-4 font-medium text-gray-700">Change</th>
               <th class="text-right py-3 px-4 font-medium text-gray-700">Change %</th>
+              <th class="text-center py-3 px-4 font-medium text-gray-700">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -167,6 +168,15 @@
                     ((entry.changePercent >= 0 ? '+' : '') + entry.changePercent.toFixed(2) + '%') : 
                     '-'
                   }
+                </td>
+                <td class="py-3 px-4 text-center">
+                  <a 
+                    href="/add?edit={entry.date}" 
+                    class="inline-flex items-center justify-center w-8 h-8 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                    title="Edit entry"
+                  >
+                    <Edit3 class="w-4 h-4" />
+                  </a>
                 </td>
               </tr>
             {/each}
