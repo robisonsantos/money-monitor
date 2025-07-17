@@ -20,54 +20,54 @@
     hasMore: boolean;
   }
 
-  let entries = $state<EnrichedInvestment[]>([]);
+  // Accept initial data from server
+  interface Props {
+    initialEntries?: EnrichedInvestment[];
+  }
+  
+  let { initialEntries = [] }: Props = $props();
+
+  let entries = $state<EnrichedInvestment[]>(initialEntries);
   let isLoading = $state(false);
   let isLoadingMore = $state(false);
   let hasMore = $state(true);
   let error = $state('');
-  let sentinelElement: HTMLDivElement;
+  let sentinelElement = $state<HTMLDivElement>();
+  // Remove debug status for production
+  // let debugStatus = $state(`Server loaded ${initialEntries.length} entries`);
+
+
 
   const ITEMS_PER_PAGE = 20;
 
   // Export function to refresh entries (useful after adding/editing)
   export function refresh() {
-    loadEntries(0, false);
+    // Reload from server by refreshing the page or re-fetching initial data
+    window.location.reload();
   }
 
-  async function loadEntries(offset = 0, append = false) {
-    const loading = offset === 0 ? 'isLoading' : 'isLoadingMore';
-    if (offset === 0) {
-      isLoading = true;
-      entries = [];
-    } else {
-      isLoadingMore = true;
-    }
-    
+  async function loadMoreEntries(offset: number) {
+    isLoadingMore = true;
     error = '';
 
     try {
-      const response = await fetch(`/api/investments/recent?limit=${ITEMS_PER_PAGE}&offset=${offset}`);
+      const url = `/api/investments/recent?limit=${ITEMS_PER_PAGE}&offset=${offset}`;
+      const response = await fetch(url);
       
       if (!response.ok) {
-        throw new Error('Failed to fetch recent entries');
+        throw new Error(`Failed to fetch recent entries: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
       const newEntries = data.investments as EnrichedInvestment[];
       const pagination = data.pagination as PaginationInfo;
 
-      if (append) {
-        entries = [...entries, ...newEntries];
-      } else {
-        entries = newEntries;
-      }
-
+      // Always append to existing entries
+      entries = [...entries, ...newEntries];
       hasMore = pagination.hasMore;
     } catch (err) {
       error = err instanceof Error ? err.message : 'Failed to load entries';
-      console.error('Error loading recent entries:', err);
     } finally {
-      isLoading = false;
       isLoadingMore = false;
     }
   }
@@ -76,11 +76,12 @@
     if (!sentinelElement) return;
 
     const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
+      (observerEntries) => {
+        const entry = observerEntries[0];
         if (entry.isIntersecting && hasMore && !isLoadingMore && !isLoading) {
+          // Load more entries starting from current length
           const currentOffset = entries.length;
-          loadEntries(currentOffset, true);
+          loadMoreEntries(currentOffset);
         }
       },
       {
@@ -96,15 +97,11 @@
     };
   }
 
-  onMount(() => {
-    loadEntries();
-    
-    // Set up intersection observer after initial load
-    setTimeout(() => {
-      if (sentinelElement) {
-        return setupIntersectionObserver();
-      }
-    }, 100);
+  // Set up intersection observer for infinite scroll
+  $effect(() => {
+    if (sentinelElement) {
+      return setupIntersectionObserver();
+    }
   });
 
   // Re-setup observer when sentinel element changes
@@ -123,11 +120,13 @@
     </a>
   </div>
   
+
+  
   {#if error && entries.length === 0}
     <div class="text-center py-8">
       <p class="text-red-600 mb-4">{error}</p>
       <button 
-        onclick={() => loadEntries()} 
+        onclick={() => window.location.reload()} 
         class="btn-secondary"
       >
         Try Again
