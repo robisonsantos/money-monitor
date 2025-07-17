@@ -76,6 +76,77 @@ The application uses SQLite for data storage. The database file (`data.db`) is a
 - `npm run preview` - Preview production build
 - `npm run check` - Run Svelte type checking
 
+## Testing
+
+The application includes a comprehensive test suite with 41 unit tests covering core functionality, business logic, and data operations. The test suite provides regression prevention and ensures code quality.
+
+### Test Commands
+
+```bash
+# Run all tests once
+npm test
+
+# Run tests in watch mode (automatically re-runs on file changes)
+npm run test:watch
+
+# Run tests with coverage report
+npm run test:coverage
+
+# Run tests with interactive UI
+npm run test:ui
+
+# Run all tests (same as npm test)
+npm run test:all
+```
+
+### Test Coverage
+
+The test suite includes:
+
+- **26 Utility Function Tests** (`src/lib/utils.test.ts`)
+  - Data aggregation and filtering logic
+  - Portfolio statistics calculations
+  - Currency, percentage, and date formatting
+  - CSV parsing and generation
+  - File download functionality
+
+- **15 Database Tests** (`src/lib/database.test.ts`)
+  - CRUD operations for investment data
+  - Bulk insert operations for CSV imports
+  - Advanced queries and pagination
+  - Database management functions
+
+### Test Framework
+
+- **Testing Framework**: Vitest
+- **Test Environment**: JSDOM (for browser API simulation)
+- **Mocking**: Comprehensive mocks for SQLite database and browser APIs
+- **Coverage**: Detailed code coverage reporting available
+
+### Running Tests
+
+Tests are designed to run independently and include proper mocking for:
+- SQLite database operations
+- File system operations
+- Browser APIs (File, URL, document)
+
+Example test output:
+```bash
+✓ src/lib/utils.test.ts (26)
+✓ src/lib/database.test.ts (15)
+
+Test Files  2 passed (2)
+Tests  41 passed (41)
+```
+
+### Writing Tests
+
+When adding new features, please include corresponding tests:
+- Add utility function tests to `src/lib/utils.test.ts`
+- Add database operation tests to `src/lib/database.test.ts`
+- Follow existing test patterns for consistency
+- Ensure proper mocking for external dependencies
+
 ## Technology Stack
 
 - **Framework**: SvelteKit with Svelte 5 (runes mode)
