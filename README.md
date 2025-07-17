@@ -8,8 +8,29 @@ A modern investment tracking application built with SvelteKit, SQLite, and Tailw
 - 📈 **Advanced Filtering** - Time-based filters for detailed trend analysis
 - 💰 **Portfolio Analytics** - Track current value, changes, best/worst days
 - 📱 **Responsive Design** - Beautiful, fast, and mobile-friendly interface
-- 🗄️ **SQLite Database** - Reliable local data storage
+- 🗄️ **SQLite Database** - Reliable local data storage with encrypted financial data
+- 🔒 **Bank-Grade Security** - AES-256-GCM encryption for all financial portfolio values
+- 👥 **Multi-User Support** - Secure user authentication and session management
 - ⚡ **Modern Stack** - Built with Svelte 5 (runes mode), SvelteKit, and Tailwind CSS
+
+## Security
+
+This application implements **bank-grade security** for protecting your financial data:
+
+### Encryption
+
+- **Algorithm**: AES-256-GCM encryption with authentication
+- **Scope**: All financial portfolio values are encrypted before storage
+- **Key Management**: Uses environment-based encryption keys
+- **Format**: Each encrypted value uses a unique initialization vector (IV) and authentication tag
+- **Transparency**: Encryption/decryption happens automatically - no changes to user experience
+
+### Data Protection
+
+- Financial values are never stored in plain text in the database
+- Each value uses a unique IV to prevent pattern analysis
+- Authentication tags ensure data integrity and prevent tampering
+- Encryption keys are managed through environment variables (never stored in code)
 
 ## Getting Started
 
@@ -31,19 +52,47 @@ cd money-monitor
 npm install
 ```
 
-3. Set up seed data (optional):
+3. **Set up environment variables** (Required for security):
+```bash
+# Create a .env file in the project root
+echo "ENCRYPTION_KEY=$(openssl rand -hex 32)" > .env
+```
+
+   **⚠️ Important Security Notes:**
+   - The `ENCRYPTION_KEY` is **required** for the application to function
+   - **Never commit your `.env` file** to version control
+   - **Back up your encryption key safely** - losing it means losing access to your encrypted data
+   - Use a cryptographically secure 32-byte (64 hex characters) key
+   - For production, use your hosting platform's environment variable system
+
+   **Alternative key generation methods:**
+   ```bash
+   # Using Node.js
+   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   
+   # Using Python
+   python3 -c "import secrets; print(secrets.token_hex(32))"
+   ```
+
+4. Set up seed data (optional):
 ```bash
 # Copy the example seed file to create your own
 cp seed/seed_data.example.json seed/seed_data.json
 # Edit seed/seed_data.json with your own data
 ```
 
-4. Start the development server:
+5. Start the development server:
 ```bash
 npm run dev
 ```
 
-5. Open [http://localhost:5173](http://localhost:5173) in your browser
+6. Open [http://localhost:5173](http://localhost:5173) in your browser
+
+## Environment Variables
+
+| Variable | Required | Description | Example |
+|----------|----------|-------------|---------|
+| `ENCRYPTION_KEY` | ✅ Yes | 32-byte encryption key for financial data security | `a1b2c3d4e5f6...` (64 hex chars) |
 
 ## Data Structure
 
@@ -63,11 +112,18 @@ The seed data file (`seed/seed_data.json`) should follow this structure:
 
 - **Years**: Use 4-digit year format (e.g., "2023")
 - **Months**: Use 3-letter abbreviations (jan, feb, mar, etc.)
-- **Values**: Portfolio values as numbers
+- **Values**: Portfolio values as numbers (automatically encrypted when stored)
 
 ### Database
 
-The application uses SQLite for data storage. The database file (`data.db`) is automatically created on first run. Investment entries are stored with daily granularity.
+The application uses SQLite for data storage with the following security features:
+
+- **Encrypted Storage**: All financial values are encrypted using AES-256-GCM before storage
+- **User Isolation**: Each user's data is completely isolated and scoped to their account
+- **Session Security**: Secure session management with proper authentication
+- **Database File**: `data.db` is automatically created on first run
+
+Investment entries are stored with daily granularity, and all financial data is transparently encrypted/decrypted during operations.
 
 ## Available Scripts
 
