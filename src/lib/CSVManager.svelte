@@ -111,12 +111,12 @@
   }
 </script>
 
-<div class="flex items-center space-x-4">
+<div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
   <!-- Export Button -->
   <button
     onclick={handleExport}
     disabled={isExporting}
-    class="btn-secondary flex items-center space-x-2"
+    class="btn-secondary flex items-center justify-center space-x-2 w-full sm:w-auto"
     title="Export current filtered data to CSV"
   >
     <Download class="w-4 h-4" />
@@ -126,7 +126,7 @@
   <!-- Import Button -->
   <button
     onclick={() => showImportDialog = true}
-    class="btn-primary flex items-center space-x-2"
+    class="btn-primary flex items-center justify-center space-x-2 w-full sm:w-auto"
     title="Import investments from CSV file"
   >
     <Upload class="w-4 h-4" />
