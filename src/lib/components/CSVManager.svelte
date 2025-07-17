@@ -10,7 +10,7 @@
 
   let { selectedPeriod, selectedFilter, onImportSuccess }: Props = $props();
 
-  let fileInput: HTMLInputElement;
+  let fileInput: HTMLInputElement | undefined = $state();
   let isImporting = $state(false);
   let isExporting = $state(false);
   let importResult = $state<{ success: boolean; message: string; errors?: string[] } | null>(null);
