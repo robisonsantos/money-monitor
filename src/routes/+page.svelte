@@ -128,6 +128,6 @@
     />
 
     <!-- Recent Entries with Infinite Scroll -->
-    <RecentEntries />
+    <RecentEntries initialEntries={data.recentEntries} />
   {/if}
 </div>
