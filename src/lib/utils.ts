@@ -201,6 +201,59 @@ export function calculatePortfolioStats(investments: Investment[]) {
   };
 }
 
+export function calculateFilteredPortfolioStats(aggregatedData: AggregatedData[]) {
+  if (aggregatedData.length === 0) {
+    return {
+      totalValue: 0,
+      totalChange: 0,
+      totalChangePercent: 0,
+      bestDay: null,
+      worstDay: null,
+      totalDays: 0
+    };
+  }
+
+  const firstEntry = aggregatedData[0];
+  const lastEntry = aggregatedData[aggregatedData.length - 1];
+
+  const totalValue = lastEntry.value;
+  const totalChange = totalValue - firstEntry.value;
+  const totalChangePercent = firstEntry.value !== 0 ? (totalChange / firstEntry.value) * 100 : 0;
+
+  // Find best and worst days from the aggregated data
+  let bestDay: { date: string; change: number; changePercent: number } | null = null;
+  let worstDay: { date: string; change: number; changePercent: number } | null = null;
+
+  for (const entry of aggregatedData) {
+    if (entry.change !== undefined && entry.changePercent !== undefined) {
+      if (!bestDay || entry.changePercent > bestDay.changePercent) {
+        bestDay = { 
+          date: entry.date, 
+          change: entry.change, 
+          changePercent: entry.changePercent 
+        };
+      }
+
+      if (!worstDay || entry.changePercent < worstDay.changePercent) {
+        worstDay = { 
+          date: entry.date, 
+          change: entry.change, 
+          changePercent: entry.changePercent 
+        };
+      }
+    }
+  }
+
+  return {
+    totalValue,
+    totalChange,
+    totalChangePercent,
+    bestDay,
+    worstDay,
+    totalDays: aggregatedData.length
+  };
+}
+
 export function formatCurrency(value: number): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',

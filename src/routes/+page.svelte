@@ -3,7 +3,7 @@
   import Chart from '$lib/Chart.svelte';
   import StatsCard from '$lib/StatsCard.svelte';
   import RecentEntries from '$lib/RecentEntries.svelte';
-  import { aggregateInvestments, calculatePortfolioStats, formatCurrency, formatDate, type AggregationPeriod, type FilterPeriod, FILTER_OPTIONS } from '$lib/utils';
+  import { aggregateInvestments, calculatePortfolioStats, calculateFilteredPortfolioStats, formatCurrency, formatDate, type AggregationPeriod, type FilterPeriod, FILTER_OPTIONS } from '$lib/utils';
   import type { PageData } from './$types';
   import { BarChart3, Calendar, TrendingUp, TrendingDown } from 'lucide-svelte';
 
@@ -12,7 +12,7 @@
   let selectedPeriod: AggregationPeriod = $state('daily');
   let selectedFilter: FilterPeriod = $state('7d'); // Default to first daily option
   let aggregatedData = $derived(aggregateInvestments(data.investments, selectedPeriod, selectedFilter));
-  let portfolioStats = $derived(calculatePortfolioStats(data.investments));
+  let portfolioStats = $derived(calculateFilteredPortfolioStats(aggregatedData));
 
   // Helper function to get default filter for each period
   function getDefaultFilter(period: AggregationPeriod): FilterPeriod {
@@ -26,7 +26,8 @@
 
   // Set default filter when period changes
   $effect(() => {
-    selectedFilter = getDefaultFilter(selectedPeriod);
+    const period = selectedPeriod;
+    selectedFilter = getDefaultFilter(period);
   });
 
   const periodOptions = [
@@ -91,7 +92,7 @@
     <!-- Stats Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <StatsCard
-        title="Current Value"
+        title={selectedFilter === 'all' ? "Current Value" : "Latest Value"}
         value={portfolioStats.totalValue}
         change={portfolioStats.totalChange}
         changePercent={portfolioStats.totalChangePercent}
@@ -99,7 +100,7 @@
       />
       
       <StatsCard
-        title="Total Entries"
+        title={selectedFilter === 'all' ? "Total Entries" : `${periodOptions.find(p => p.value === selectedPeriod)?.label} Entries`}
         value={portfolioStats.totalDays.toString()}
         icon="calendar"
         showChange={false}
@@ -107,7 +108,7 @@
       
       {#if portfolioStats.bestDay}
         <StatsCard
-          title="Best Day"
+          title={selectedFilter === 'all' ? "Best Day" : `Best ${selectedPeriod === 'daily' ? 'Day' : selectedPeriod === 'weekly' ? 'Week' : 'Month'}`}
           value={formatDate(portfolioStats.bestDay.date)}
           change={portfolioStats.bestDay.change}
           changePercent={portfolioStats.bestDay.changePercent}
@@ -117,7 +118,7 @@
       
       {#if portfolioStats.worstDay}
         <StatsCard
-          title="Worst Day"
+          title={selectedFilter === 'all' ? "Worst Day" : `Worst ${selectedPeriod === 'daily' ? 'Day' : selectedPeriod === 'weekly' ? 'Week' : 'Month'}`}
           value={formatDate(portfolioStats.worstDay.date)}
           change={portfolioStats.worstDay.change}
           changePercent={portfolioStats.worstDay.changePercent}
