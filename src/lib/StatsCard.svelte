@@ -34,30 +34,30 @@
   const changeIcon = $derived(isPositive ? TrendingUp : TrendingDown);
 </script>
 
-<div class="card">
-  <div class="flex items-center justify-between">
-    <div class="flex-1">
-      <p class="text-sm font-medium text-gray-600">{title}</p>
-      <p class="text-2xl font-bold text-gray-900 mt-1">
-        {typeof value === 'number' ? formatCurrency(value) : value}
-      </p>
-      
-      {#if showChange && change !== undefined && changePercent !== undefined}
-        {@const ChangeIcon = changeIcon}
-        <div class="flex items-center mt-2">
-          <ChangeIcon class="w-4 h-4 {changeColor} mr-1" />
-          <span class="text-sm font-medium {changeColor}">
-            {isPositive ? '+' : ''}{formatCurrency(change)}
-            ({isPositive ? '+' : ''}{formatPercent(changePercent)})
-          </span>
-        </div>
-      {/if}
+<div class="card relative">
+  <!-- Icon positioned in top-right corner -->
+  <div class="absolute top-3 right-3">
+    <div class="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+      <IconComponent class="w-5 h-5 text-primary-600" />
     </div>
+  </div>
+  
+  <!-- Content area with right padding to avoid icon overlap -->
+  <div class="pr-20">
+    <p class="text-sm font-medium text-gray-600">{title}</p>
+    <p class="text-2xl font-bold text-gray-900 mt-1">
+      {typeof value === 'number' ? formatCurrency(value) : value}
+    </p>
     
-    <div class="ml-4">
-      <div class="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
-        <IconComponent class="w-6 h-6 text-primary-600" />
+    {#if showChange && change !== undefined && changePercent !== undefined}
+      {@const ChangeIcon = changeIcon}
+      <div class="flex items-center mt-2">
+        <ChangeIcon class="w-4 h-4 {changeColor} mr-1" />
+        <span class="text-sm font-medium {changeColor}">
+          {isPositive ? '+' : ''}{formatCurrency(change)}
+          ({isPositive ? '+' : ''}{formatPercent(changePercent)})
+        </span>
       </div>
-    </div>
+    {/if}
   </div>
 </div>
