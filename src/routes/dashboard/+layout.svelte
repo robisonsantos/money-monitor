@@ -1,6 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { TrendingUp, User, LogOut } from 'lucide-svelte';
+  import { TrendingUp, User, LogOut, BarChart3, Plus } from 'lucide-svelte';
   import type { LayoutData } from './$types';
 
   let { data, children }: { data: LayoutData; children: any } = $props();
@@ -21,7 +21,7 @@
 
 <div class="min-h-screen bg-gray-50">
   <!-- Navigation Header -->
-  <header class="bg-white shadow-sm border-b border-gray-200">
+  <header class="sticky top-0 z-50 bg-white shadow-sm border-b border-gray-200">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between h-16">
         <div class="flex items-center">
@@ -30,11 +30,13 @@
             <span class="ml-2 text-xl font-bold text-gray-900">Money Monitor</span>
           </div>
           <nav class="hidden md:ml-6 md:flex md:space-x-8">
-            <a href="/dashboard" class="text-blue-600 hover:text-blue-700 px-3 py-2 rounded-md text-sm font-medium">
-              Dashboard
+            <a href="/dashboard" class="flex items-center space-x-2 text-blue-600 hover:text-blue-700 px-3 py-2 rounded-md text-sm font-medium transition-colors group">
+              <BarChart3 class="h-4 w-4 group-hover:scale-110 transition-transform" />
+              <span>Dashboard</span>
             </a>
-            <a href="/dashboard/add" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">
-              Add Entry
+            <a href="/dashboard/add" class="flex items-center space-x-2 text-gray-500 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors group">
+              <Plus class="h-4 w-4 group-hover:scale-110 transition-transform" />
+              <span>Add Entry</span>
             </a>
           </nav>
         </div>
@@ -56,8 +58,8 @@
     </div>
   </header>
 
-  <!-- Main Content -->
-  <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+  <!-- Main Content with padding to account for sticky navbar -->
+  <main class="max-w-7xl mx-auto pt-6 pb-12 sm:px-6 lg:px-8">
     <div class="px-4 py-6 sm:px-0">
       {@render children()}
     </div>
