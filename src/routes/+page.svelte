@@ -51,44 +51,51 @@
 
 <div class="space-y-6">
   <!-- Header -->
-  <div class="flex items-center justify-between">
-    <div>
-      <h1 class="text-3xl font-bold text-gray-900">Investment Dashboard</h1>
+  <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 lg:gap-6">
+    <div class="flex-shrink-0">
+      <h1 class="text-2xl lg:text-3xl font-bold text-gray-900">Investment Dashboard</h1>
       <p class="text-gray-600 mt-1">Track your portfolio performance over time</p>
     </div>
     
     {#if data.investments.length > 0}
-      <div class="flex items-center space-x-4">
-        <div class="flex items-center space-x-2">
-          <label for="period" class="text-sm font-medium text-gray-700">View:</label>
-          <select 
-            id="period"
-            bind:value={selectedPeriod}
-            class="input w-auto min-w-[120px]"
-          >
-            {#each periodOptions as option}
-              <option value={option.value}>{option.label}</option>
-            {/each}
-          </select>
+      <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
+        <!-- Filter Controls -->
+        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
+          <div class="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+            <label for="period" class="text-sm font-medium text-gray-700 whitespace-nowrap">View:</label>
+            <select 
+              id="period"
+              bind:value={selectedPeriod}
+              class="input w-full sm:w-auto sm:min-w-[120px]"
+            >
+              {#each periodOptions as option}
+                <option value={option.value}>{option.label}</option>
+              {/each}
+            </select>
+          </div>
+          
+          <div class="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+            <label for="filter" class="text-sm font-medium text-gray-700 whitespace-nowrap">Period:</label>
+            <select 
+              id="filter"
+              bind:value={selectedFilter}
+              class="input w-full sm:w-auto sm:min-w-[140px]"
+            >
+              {#each FILTER_OPTIONS[selectedPeriod] as option}
+                <option value={option.value}>{option.label}</option>
+              {/each}
+            </select>
+          </div>
         </div>
         
-        <div class="flex items-center space-x-2">
-          <label for="filter" class="text-sm font-medium text-gray-700">Period:</label>
-          <select 
-            id="filter"
-            bind:value={selectedFilter}
-            class="input w-auto min-w-[140px]"
-          >
-            {#each FILTER_OPTIONS[selectedPeriod] as option}
-              <option value={option.value}>{option.label}</option>
-            {/each}
-          </select>
+        <!-- CSV Controls -->
+        <div class="w-full sm:w-auto sm:flex-shrink-0">
+          <CSVManager
+            selectedPeriod={selectedPeriod}
+            selectedFilter={selectedFilter}
+            onImportSuccess={handleImportSuccess}
+          />
         </div>
-        <CSVManager
-          selectedPeriod={selectedPeriod}
-          selectedFilter={selectedFilter}
-          onImportSuccess={handleImportSuccess}
-        />
       </div>
     {/if}
   </div>
