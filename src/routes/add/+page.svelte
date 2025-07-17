@@ -1,13 +1,94 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { Plus, Save, AlertCircle } from 'lucide-svelte';
+  import { page } from '$app/stores';
+  import { Plus, Save, AlertCircle, Edit3 } from 'lucide-svelte';
   import { format } from 'date-fns';
+  import { formatDate } from '$lib/utils';
+  import { onMount } from 'svelte';
 
   let date = $state(format(new Date(), 'yyyy-MM-dd'));
   let value = $state('');
   let isLoading = $state(false);
   let error = $state('');
   let success = $state(false);
+  let isEditMode = $state(false);
+  let originalDate = $state('');
+  let dateWarning = $state('');
+
+  // Reactive check for edit mode based on URL parameters
+  $effect(() => {
+    const editDate = $page.url.searchParams.get('edit');
+    
+    if (editDate && editDate !== originalDate) {
+      isEditMode = true;
+      originalDate = editDate;
+      date = editDate;
+      loadExistingData(editDate);
+    } else if (!editDate && isEditMode) {
+      // Reset to add mode if no edit parameter
+      isEditMode = false;
+      originalDate = '';
+      date = format(new Date(), 'yyyy-MM-dd');
+      value = '';
+      error = '';
+    }
+  });
+
+  // Real-time date validation for new entries
+  $effect(() => {
+    if (!isEditMode && date && date !== format(new Date(), 'yyyy-MM-dd')) {
+      checkDateExists(date).then(dateExists => {
+        if (dateExists) {
+          dateWarning = `⚠️ An entry already exists for ${formatDate(date)}`;
+        } else {
+          dateWarning = '';
+        }
+      }).catch(() => {
+        dateWarning = '';
+      });
+    } else {
+      dateWarning = '';
+    }
+  });
+
+  async function loadExistingData(editDate: string) {
+    isLoading = true;
+    error = '';
+    
+    try {
+      const response = await fetch(`/api/investments`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch investments');
+      }
+      
+      const investments = await response.json();
+      const existingInvestment = investments.find((inv: any) => inv.date === editDate);
+      
+      if (existingInvestment) {
+        value = existingInvestment.value.toString();
+      } else {
+        error = 'Investment not found for this date';
+      }
+    } catch (err) {
+      error = 'Failed to load investment data';
+      console.error('Error loading investment data:', err);
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  async function checkDateExists(dateToCheck: string): Promise<boolean> {
+    try {
+      const response = await fetch('/api/investments');
+      if (response.ok) {
+        const investments = await response.json();
+        return investments.some((inv: any) => inv.date === dateToCheck);
+      }
+    } catch (err) {
+      console.error('Error checking existing dates:', err);
+    }
+    return false;
+  }
 
   async function handleSubmit(event?: SubmitEvent) {
     event?.preventDefault();
@@ -22,12 +103,22 @@
       return;
     }
 
+    // Check for duplicate dates only when creating new entries
+    if (!isEditMode) {
+      const dateExists = await checkDateExists(date);
+      if (dateExists) {
+        error = `An investment entry already exists for ${formatDate(date)}. Please use the edit functionality to update it, or choose a different date.`;
+        return;
+      }
+    }
+
     isLoading = true;
     error = '';
 
     try {
+      const method = isEditMode ? 'PUT' : 'POST';
       const response = await fetch('/api/investments', {
-        method: 'POST',
+        method,
         headers: {
           'Content-Type': 'application/json'
         },
@@ -39,14 +130,23 @@
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save investment');
+        
+        // Handle specific conflict error (409) for duplicate dates
+        if (response.status === 409) {
+          error = `${errorData.error} Current value: $${errorData.existingValue?.toLocaleString() || 'N/A'}`;
+        } else {
+          throw new Error(errorData.error || `Failed to ${isEditMode ? 'update' : 'save'} investment`);
+        }
+        return;
       }
 
       success = true;
       
-      // Reset form
-      value = '';
-      date = format(new Date(), 'yyyy-MM-dd');
+      if (!isEditMode) {
+        // Reset form only for new entries
+        value = '';
+        date = format(new Date(), 'yyyy-MM-dd');
+      }
       
       // Show success message briefly then redirect
       setTimeout(() => {
@@ -69,21 +169,37 @@
 </script>
 
 <svelte:head>
-  <title>Add Entry - Money Monitor</title>
+  <title>{isEditMode ? 'Edit Entry' : 'Add Entry'} - Money Monitor</title>
 </svelte:head>
 
 <div class="max-w-2xl mx-auto">
   <div class="mb-8">
-    <h1 class="text-3xl font-bold text-gray-900">Add Investment Entry</h1>
-    <p class="text-gray-600 mt-1">Record your portfolio value for a specific date</p>
+    <h1 class="text-3xl font-bold text-gray-900">
+      {isEditMode ? 'Edit Investment Entry' : 'Add Investment Entry'}
+    </h1>
+    <p class="text-gray-600 mt-1">
+      {isEditMode ? 'Update your portfolio value for this date' : 'Record your portfolio value for a specific date'}
+    </p>
   </div>
 
   <div class="card">
+    {#if isEditMode}
+      <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+        <div class="flex items-center">
+          <Edit3 class="w-5 h-5 text-blue-600 mr-3" />
+          <p class="text-blue-800 font-medium">Editing existing entry for {formatDate(date)}</p>
+        </div>
+        <p class="text-blue-700 text-sm mt-1">You can update the portfolio value below.</p>
+      </div>
+    {/if}
+
     {#if success}
       <div class="bg-success-50 border border-success-200 rounded-lg p-4 mb-6">
         <div class="flex items-center">
           <div class="w-5 h-5 text-success-600 mr-3">✓</div>
-          <p class="text-success-800 font-medium">Investment entry saved successfully!</p>
+          <p class="text-success-800 font-medium">
+            Investment entry {isEditMode ? 'updated' : 'saved'} successfully!
+          </p>
         </div>
         <p class="text-success-700 text-sm mt-1">Redirecting to dashboard...</p>
       </div>
@@ -107,12 +223,18 @@
           id="date"
           type="date"
           bind:value={date}
-          class="input"
+          class="input {isEditMode ? 'bg-gray-100 cursor-not-allowed text-gray-600' : ''}"
           required
-          disabled={isLoading}
+          disabled={isLoading || isEditMode}
+          readonly={isEditMode}
         />
+        {#if dateWarning}
+          <p class="text-sm text-amber-600 mt-1 font-medium">
+            {dateWarning}
+          </p>
+        {/if}
         <p class="text-sm text-gray-500 mt-1">
-          Select the date for this investment value
+          {isEditMode ? 'Date cannot be changed when editing an existing entry' : 'Select the date for this investment value'}
         </p>
       </div>
 
@@ -131,7 +253,7 @@
             min="0"
             bind:value={value}
             class="input pl-7"
-            placeholder="0.00"
+            placeholder={isLoading && isEditMode ? "Loading..." : "0.00"}
             required
             disabled={isLoading}
             onkeydown={handleKeydown}
@@ -146,11 +268,14 @@
         <button
           type="submit"
           class="btn-primary flex items-center space-x-2"
-          disabled={isLoading}
+          disabled={isLoading || (!isEditMode && !!dateWarning)}
         >
           {#if isLoading}
             <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-            <span>Saving...</span>
+            <span>{isEditMode ? 'Updating...' : 'Saving...'}</span>
+          {:else if isEditMode}
+            <Edit3 class="w-4 h-4" />
+            <span>Update Entry</span>
           {:else}
             <Save class="w-4 h-4" />
             <span>Save Entry</span>
@@ -161,6 +286,13 @@
           Cancel
         </a>
       </div>
+
+      {#if !isEditMode && dateWarning}
+        <p class="text-sm text-amber-600 mt-2 flex items-center">
+          <AlertCircle class="w-4 h-4 mr-2" />
+          Please select a different date or use the edit functionality to update the existing entry.
+        </p>
+      {/if}
     </form>
   </div>
 
