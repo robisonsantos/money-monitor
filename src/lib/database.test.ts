@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+// Test constants
+const TEST_USER_ID = 1;
+
 // Create mocks before importing the database module
 const mockPreparedStatements = {
   insertInvestment: { run: vi.fn() },
@@ -60,8 +63,6 @@ vi.mock('better-sqlite3', () => ({
 const { investmentDb } = await import('./database');
 
 describe('investmentDb', () => {
-  const TEST_USER_ID = 1; // Test user ID for all operations
-
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -88,7 +89,7 @@ describe('investmentDb', () => {
     it('should return undefined for non-existent investment', () => {
       mockPreparedStatements.getInvestmentByDate.get.mockReturnValue(undefined);
       
-      const result = investmentDb.getInvestment('2024-12-31');
+      const result = investmentDb.getInvestment(TEST_USER_ID, '2024-12-31');
       
       expect(result).toBeUndefined();
     });
@@ -102,16 +103,16 @@ describe('investmentDb', () => {
       ];
       mockPreparedStatements.getAllInvestments.all.mockReturnValue(mockInvestments);
       
-      const result = investmentDb.getAllInvestments();
+      const result = investmentDb.getAllInvestments(TEST_USER_ID);
       
-      expect(mockPreparedStatements.getAllInvestments.all).toHaveBeenCalled();
+      expect(mockPreparedStatements.getAllInvestments.all).toHaveBeenCalledWith(TEST_USER_ID);
       expect(result).toEqual(mockInvestments);
     });
 
     it('should return empty array when no investments exist', () => {
       mockPreparedStatements.getAllInvestments.all.mockReturnValue([]);
       
-      const result = investmentDb.getAllInvestments();
+      const result = investmentDb.getAllInvestments(TEST_USER_ID);
       
       expect(result).toEqual([]);
     });
@@ -125,19 +126,19 @@ describe('investmentDb', () => {
       ];
       mockPreparedStatements.getInvestmentsInRange.all.mockReturnValue(mockInvestments);
       
-      const result = investmentDb.getInvestmentsInRange('2024-01-01', '2024-01-02');
+      const result = investmentDb.getInvestmentsInRange(TEST_USER_ID, '2024-01-01', '2024-01-02');
       
       expect(mockPreparedStatements.getInvestmentsInRange.all)
-        .toHaveBeenCalledWith('2024-01-01', '2024-01-02');
+        .toHaveBeenCalledWith(TEST_USER_ID, '2024-01-01', '2024-01-02');
       expect(result).toEqual(mockInvestments);
     });
   });
 
   describe('deleteInvestment', () => {
     it('should delete investment for given date', () => {
-      investmentDb.deleteInvestment('2024-01-01');
+      investmentDb.deleteInvestment(TEST_USER_ID, '2024-01-01');
       
-      expect(mockPreparedStatements.deleteInvestment.run).toHaveBeenCalledWith('2024-01-01');
+      expect(mockPreparedStatements.deleteInvestment.run).toHaveBeenCalledWith(TEST_USER_ID, '2024-01-01');
     });
   });
 
@@ -146,16 +147,16 @@ describe('investmentDb', () => {
       const mockInvestment = { id: 5, date: '2024-01-05', value: 105000 };
       mockPreparedStatements.getLatestInvestment.get.mockReturnValue(mockInvestment);
       
-      const result = investmentDb.getLatestInvestment();
+      const result = investmentDb.getLatestInvestment(TEST_USER_ID);
       
-      expect(mockPreparedStatements.getLatestInvestment.get).toHaveBeenCalled();
+      expect(mockPreparedStatements.getLatestInvestment.get).toHaveBeenCalledWith(TEST_USER_ID);
       expect(result).toEqual(mockInvestment);
     });
 
     it('should return undefined when no investments exist', () => {
       mockPreparedStatements.getLatestInvestment.get.mockReturnValue(undefined);
       
-      const result = investmentDb.getLatestInvestment();
+      const result = investmentDb.getLatestInvestment(TEST_USER_ID);
       
       expect(result).toBeUndefined();
     });
@@ -169,10 +170,10 @@ describe('investmentDb', () => {
       ];
       mockPreparedStatements.getInvestmentsPaginated.all.mockReturnValue(mockInvestments);
       
-      const result = investmentDb.getInvestmentsPaginated(10, 0);
+      const result = investmentDb.getInvestmentsPaginated(TEST_USER_ID, 10, 0);
       
       expect(mockPreparedStatements.getInvestmentsPaginated.all)
-        .toHaveBeenCalledWith(10, 0);
+        .toHaveBeenCalledWith(TEST_USER_ID, 10, 0);
       expect(result).toEqual(mockInvestments);
     });
   });
@@ -187,19 +188,19 @@ describe('investmentDb', () => {
       };
       mockPreparedStatements.getInvestmentWithPrevious.get.mockReturnValue(mockData);
       
-      const result = investmentDb.getInvestmentWithPrevious('2024-01-02');
+      const result = investmentDb.getInvestmentWithPrevious(TEST_USER_ID, '2024-01-02');
       
       expect(mockPreparedStatements.getInvestmentWithPrevious.get)
-        .toHaveBeenCalledWith('2024-01-02');
+        .toHaveBeenCalledWith(TEST_USER_ID, '2024-01-02');
       expect(result).toEqual(mockData);
     });
   });
 
   describe('clearAllInvestments', () => {
     it('should clear all investments', () => {
-      investmentDb.clearAllInvestments();
+      investmentDb.clearAllInvestments(TEST_USER_ID);
       
-      expect(mockPreparedStatements.deleteAllInvestments.run).toHaveBeenCalled();
+      expect(mockPreparedStatements.deleteAllInvestments.run).toHaveBeenCalledWith(TEST_USER_ID);
     });
   });
 
@@ -211,18 +212,18 @@ describe('investmentDb', () => {
         { date: '2024-01-03', value: 98000 }
       ];
 
-      const result = investmentDb.bulkInsertInvestments(investments);
+      const result = investmentDb.bulkInsertInvestments(TEST_USER_ID, investments);
       
       expect(mockDb.transaction).toHaveBeenCalled();
       expect(result).toBe(3);
       expect(mockPreparedStatements.insertInvestment.run).toHaveBeenCalledTimes(3);
-      expect(mockPreparedStatements.insertInvestment.run).toHaveBeenCalledWith('2024-01-01', 100000);
-      expect(mockPreparedStatements.insertInvestment.run).toHaveBeenCalledWith('2024-01-02', 102000);
-      expect(mockPreparedStatements.insertInvestment.run).toHaveBeenCalledWith('2024-01-03', 98000);
+      expect(mockPreparedStatements.insertInvestment.run).toHaveBeenCalledWith(TEST_USER_ID, '2024-01-01', 100000);
+      expect(mockPreparedStatements.insertInvestment.run).toHaveBeenCalledWith(TEST_USER_ID, '2024-01-02', 102000);
+      expect(mockPreparedStatements.insertInvestment.run).toHaveBeenCalledWith(TEST_USER_ID, '2024-01-03', 98000);
     });
 
     it('should handle empty array', () => {
-      const result = investmentDb.bulkInsertInvestments([]);
+      const result = investmentDb.bulkInsertInvestments(TEST_USER_ID, []);
       
       expect(result).toBe(0);
       expect(mockPreparedStatements.insertInvestment.run).not.toHaveBeenCalled();
