@@ -50,6 +50,24 @@ const getLatestInvestment = db.prepare(`
   SELECT * FROM investments ORDER BY date DESC LIMIT 1
 `);
 
+const getInvestmentsPaginated = db.prepare(`
+  SELECT * FROM investments 
+  ORDER BY date DESC 
+  LIMIT ? OFFSET ?
+`);
+
+const getInvestmentWithPrevious = db.prepare(`
+  SELECT 
+    curr.*,
+    prev.value as prev_value
+  FROM investments curr
+  LEFT JOIN investments prev ON prev.date = (
+    SELECT MAX(date) FROM investments 
+    WHERE date < curr.date
+  )
+  WHERE curr.date = ?
+`);
+
 const deleteAllInvestments = db.prepare(`
   DELETE FROM investments
 `);
@@ -91,6 +109,16 @@ export const investmentDb = {
   // Get latest investment
   getLatestInvestment: (): Investment | undefined => {
     return getLatestInvestment.get() as Investment | undefined;
+  },
+
+  // Get investments with pagination (newest first)
+  getInvestmentsPaginated: (limit: number, offset: number): Investment[] => {
+    return getInvestmentsPaginated.all(limit, offset) as Investment[];
+  },
+
+  // Get investment with previous value for change calculation
+  getInvestmentWithPrevious: (date: string): any => {
+    return getInvestmentWithPrevious.get(date);
   },
 
   // Clear all investments
