@@ -34,8 +34,6 @@
   let error = $state('');
   let sentinelElement = $state<HTMLDivElement>();
   let scrollContainer = $state<HTMLDivElement>();
-  // Remove debug status for production
-  // let debugStatus = $state(`Server loaded ${initialEntries.length} entries`);
 
 
 

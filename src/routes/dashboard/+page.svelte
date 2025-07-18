@@ -12,7 +12,9 @@
 
   let selectedPeriod: AggregationPeriod = $state('daily');
   let selectedFilter: FilterPeriod = $state('7d'); // Default to first daily option
-  let aggregatedData = $derived(aggregateInvestments(data.investments, selectedPeriod, selectedFilter));
+  let investments = $state([]); // Start with empty array, load on demand
+  let isLoadingInvestments = $state(false);
+  let aggregatedData = $derived(aggregateInvestments(investments, selectedPeriod, selectedFilter));
   let portfolioStats = $derived(calculateFilteredPortfolioStats(aggregatedData));
   let recentEntriesKey = $state(0); // Key to force refresh of RecentEntries
 
@@ -30,6 +32,28 @@
   $effect(() => {
     const period = selectedPeriod;
     selectedFilter = getDefaultFilter(period);
+  });
+
+  // Load investments data on demand
+  async function loadInvestments() {
+    if (isLoadingInvestments) return;
+    
+    isLoadingInvestments = true;
+    try {
+      const response = await fetch('/api/investments');
+      if (response.ok) {
+        investments = await response.json();
+      }
+    } catch (error) {
+      console.error('Failed to load investments:', error);
+    } finally {
+      isLoadingInvestments = false;
+    }
+  }
+
+  // Load investments when component mounts
+  onMount(() => {
+    loadInvestments();
   });
 
   // Refresh data after CSV import
@@ -53,7 +77,7 @@
       <p class="text-gray-600 mt-1">Track your portfolio performance over time</p>
     </div>
     
-    {#if data.investments.length > 0}
+    {#if investments.length > 0}
       <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
         <!-- Filter Controls -->
         <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
@@ -96,7 +120,7 @@
     {/if}
   </div>
 
-  {#if data.investments.length === 0}
+  {#if investments.length === 0 && !isLoadingInvestments}
     <!-- Empty State -->
     <div class="text-center py-12">
       <BarChart3 class="w-16 h-16 text-gray-400 mx-auto mb-4" />
