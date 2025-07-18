@@ -6,9 +6,10 @@
   // Accept filtered data from parent dashboard
   interface Props {
     filteredInvestments?: AggregatedData[];
+    isLoading?: boolean;
   }
   
-  let { filteredInvestments = [] }: Props = $props();
+  let { filteredInvestments = [], isLoading = false }: Props = $props();
 
   let displayedEntries = $state<AggregatedData[]>([]);
   let isLoadingMore = $state(false);

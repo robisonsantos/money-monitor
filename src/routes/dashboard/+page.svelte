@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import Chart from '$lib/components/Chart.svelte';
   import StatsCard from '$lib/components/StatsCard.svelte';
   import RecentEntries from '$lib/components/RecentEntries.svelte';
@@ -11,8 +12,9 @@
 
   let selectedPeriod: AggregationPeriod = $state('daily');
   let selectedFilter: FilterPeriod = $state('7d'); // Default to first daily option
-  let investments = $state(data.allInvestments || []); // Use server-loaded data directly
-  // Always use the server-loaded investments
+  let investments = $state<any[]>([]); // Start empty, will be loaded via API
+  let isLoading = $state(true); // Start in loading state
+  // Use loaded investments or empty array
   let displayInvestments = $derived(investments);
   let aggregatedData = $derived(aggregateInvestments(displayInvestments, selectedPeriod, selectedFilter));
   let portfolioStats = $derived(calculateFilteredPortfolioStats(aggregatedData));
@@ -39,6 +41,30 @@
     }
   });
 
+  // Load investments via API call
+  async function loadInvestments() {
+    isLoading = true;
+    try {
+      const response = await fetch('/api/investments', {
+        credentials: 'include'
+      });
+      if (response.ok) {
+        investments = await response.json();
+      } else {
+        console.error('Failed to load investments:', response.status);
+      }
+    } catch (error) {
+      console.error('Failed to load investments:', error);
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  // Load data when component mounts
+  onMount(() => {
+    loadInvestments();
+  });
+
   // Refresh data after CSV import
   function handleImportSuccess() {
     // Force page reload to refresh all data
@@ -60,7 +86,7 @@
       <p class="text-gray-600 mt-1">Track your portfolio performance over time</p>
     </div>
     
-    {#if displayInvestments.length > 0}
+    {#if displayInvestments.length > 0 && !isLoading}
       <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
         <!-- Filter Controls -->
         <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
@@ -103,7 +129,46 @@
     {/if}
   </div>
 
-  {#if displayInvestments.length === 0}
+  {#if isLoading}
+    <!-- Skeleton Loading State -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {#each Array(4) as _, i}
+        <div class="card">
+          <div class="animate-pulse">
+            <div class="h-4 bg-gray-200 rounded w-3/4 mb-3"></div>
+            <div class="h-8 bg-gray-200 rounded w-1/2 mb-2"></div>
+            <div class="h-3 bg-gray-200 rounded w-1/3"></div>
+          </div>
+        </div>
+      {/each}
+    </div>
+
+    <!-- Chart Skeleton -->
+    <div class="card">
+      <div class="animate-pulse">
+        <div class="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+        <div class="h-96 bg-gray-100 rounded"></div>
+      </div>
+    </div>
+
+    <!-- Recent Entries Skeleton -->
+    <div class="card">
+      <div class="animate-pulse">
+        <div class="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
+        <div class="space-y-3">
+          {#each Array(10) as _, i}
+            <div class="flex justify-between items-center py-2">
+              <div class="h-4 bg-gray-200 rounded w-1/6"></div>
+              <div class="h-4 bg-gray-200 rounded w-1/8"></div>
+              <div class="h-4 bg-gray-200 rounded w-1/8"></div>
+              <div class="h-4 bg-gray-200 rounded w-1/8"></div>
+              <div class="h-4 bg-gray-200 rounded w-1/12"></div>
+            </div>
+          {/each}
+        </div>
+      </div>
+    </div>
+  {:else if displayInvestments.length === 0}
     <!-- Empty State -->
     <div class="text-center py-12">
       <BarChart3 class="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -171,6 +236,6 @@
     />
 
     <!-- Recent Entries with Infinite Scroll -->
-    <RecentEntries filteredInvestments={filteredDailyEntries} />
+    <RecentEntries filteredInvestments={filteredDailyEntries} isLoading={isLoading} />
   {/if}
 </div> 
