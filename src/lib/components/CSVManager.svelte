@@ -6,9 +6,10 @@
     selectedPeriod: AggregationPeriod;
     selectedFilter: FilterPeriod;
     onImportSuccess?: () => void;
+    importOnly?: boolean; // Show only import button (for empty states)
   }
 
-  let { selectedPeriod, selectedFilter, onImportSuccess }: Props = $props();
+  let { selectedPeriod, selectedFilter, onImportSuccess, importOnly = false }: Props = $props();
 
   let fileInput: HTMLInputElement | undefined = $state();
   let isImporting = $state(false);
@@ -112,16 +113,18 @@
 </script>
 
 <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
-  <!-- Export Button -->
-  <button
-    onclick={handleExport}
-    disabled={isExporting}
-    class="btn-secondary flex items-center justify-center space-x-2 w-full sm:w-auto"
-    title="Export current filtered data to CSV"
-  >
-    <Download class="w-4 h-4" />
-    <span>{isExporting ? 'Exporting...' : 'Export CSV'}</span>
-  </button>
+  <!-- Export Button (hidden in import-only mode) -->
+  {#if !importOnly}
+    <button
+      onclick={handleExport}
+      disabled={isExporting}
+      class="btn-secondary flex items-center justify-center space-x-2 w-full sm:w-auto"
+      title="Export current filtered data to CSV"
+    >
+      <Download class="w-4 h-4" />
+      <span>{isExporting ? 'Exporting...' : 'Export CSV'}</span>
+    </button>
+  {/if}
 
   <!-- Import Button -->
   <button
