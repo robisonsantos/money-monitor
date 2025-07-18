@@ -6,10 +6,9 @@
   // Accept filtered data from parent dashboard
   interface Props {
     filteredInvestments?: AggregatedData[];
-    isLoading?: boolean;
   }
   
-  let { filteredInvestments = [], isLoading = false }: Props = $props();
+  let { filteredInvestments = [] }: Props = $props();
 
   let displayedEntries = $state<AggregatedData[]>([]);
   let isLoadingMore = $state(false);
@@ -39,7 +38,7 @@
   });
 
   function loadMoreEntries() {
-    if (!hasMore || isLoadingMore || isLoading) return;
+    if (!hasMore || isLoadingMore) return;
 
     isLoadingMore = true;
     
@@ -62,7 +61,7 @@
     const observer = new IntersectionObserver(
       (observerEntries) => {
         const entry = observerEntries[0];
-        if (entry.isIntersecting && hasMore && !isLoadingMore && !isLoading) {
+        if (entry.isIntersecting && hasMore && !isLoadingMore) {
           loadMoreEntries();
         }
       },
@@ -98,12 +97,10 @@
   
 
   
-  {#if isLoading && displayedEntries.length === 0}
-    <div class="text-center py-8">
-      <div class="flex items-center justify-center space-x-2">
-        <Loader class="w-5 h-5 animate-spin text-primary-600" />
-        <span class="text-gray-600">Loading entries...</span>
-      </div>
+  {#if displayedEntries.length === 0}
+    <!-- Empty State -->
+    <div class="text-center py-8 text-gray-500">
+      No entries found for the selected filter
     </div>
   {:else}
     <!-- Fixed height scrollable container -->
