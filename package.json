@@ -10,6 +10,8 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "seed": "node scripts/seed.js",
+    "db:setup": "node scripts/setup-postgres.js",
+    "db:migrate": "node scripts/migrate-sqlite-to-postgres.js",
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest --coverage",
@@ -39,11 +41,14 @@
   },
   "dependencies": {
     "@types/bcrypt": "^5.0.2",
+    "@types/pg": "^8.15.4",
     "bcrypt": "^6.0.0",
     "better-sqlite3": "^11.5.0",
     "chart.js": "^4.4.6",
     "cookie": "^1.0.2",
     "date-fns": "^4.1.0",
-    "lucide-svelte": "^0.468.0"
+    "dotenv": "^17.2.0",
+    "lucide-svelte": "^0.468.0",
+    "pg": "^8.16.3"
   }
 }
