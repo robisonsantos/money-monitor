@@ -14,7 +14,9 @@
   let selectedFilter: FilterPeriod = $state('7d'); // Default to first daily option
   let investments = $state([]); // Start with empty array, load on demand
   let isLoadingInvestments = $state(false);
-  let aggregatedData = $derived(aggregateInvestments(investments, selectedPeriod, selectedFilter));
+  // Use client-loaded investments if available, otherwise fall back to server-loaded recentEntries for initial display
+  let displayInvestments = $derived(investments.length > 0 ? investments : data.recentEntries || []);
+  let aggregatedData = $derived(aggregateInvestments(displayInvestments, selectedPeriod, selectedFilter));
   let portfolioStats = $derived(calculateFilteredPortfolioStats(aggregatedData));
   let recentEntriesKey = $state(0); // Key to force refresh of RecentEntries
 
@@ -58,6 +60,7 @@
 
   // Load investments when component mounts
   onMount(() => {
+    console.log('Dashboard mounted, recentEntries length:', data.recentEntries?.length || 0);
     loadInvestments();
   });
 
@@ -132,7 +135,7 @@
       <h2 class="text-xl font-semibold text-gray-900 mb-2">Loading your investments...</h2>
       <p class="text-gray-600">Please wait while we fetch your data.</p>
     </div>
-  {:else if investments.length === 0}
+  {:else if investments.length === 0 && (!data.recentEntries || data.recentEntries.length === 0)}
     <!-- Empty State -->
     <div class="text-center py-12">
       <BarChart3 class="w-16 h-16 text-gray-400 mx-auto mb-4" />
