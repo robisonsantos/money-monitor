@@ -90,7 +90,7 @@ pool.on('error', (err, client) => {
 
 // Test connection on startup
 pool.on('connect', (client) => {
-  console.log('New PostgreSQL client connected');
+  if (dev) console.log('New PostgreSQL client connected');
 });
 
 // Add connection test

@@ -44,7 +44,6 @@
   async function loadInvestments() {
     if (!browser) return; // Only run in browser
     
-    console.log('🚀 Loading investments...');
     try {
       const response = await fetch('/api/investments', {
         credentials: 'include'
@@ -52,12 +51,11 @@
       
       if (response.ok) {
         investments = await response.json();
-        console.log('✅ Successfully loaded', investments.length, 'investments');
       } else {
-        console.error('❌ Failed to load investments:', response.status);
+        console.error('Failed to load investments:', response.status);
       }
     } catch (error) {
-      console.error('❌ Error loading investments:', error);
+      console.error('Error loading investments:', error);
     } finally {
       isLoading = false;
     }
