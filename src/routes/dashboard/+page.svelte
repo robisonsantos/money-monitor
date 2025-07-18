@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { browser } from '$app/environment';
   import Chart from '$lib/components/Chart.svelte';
   import StatsCard from '$lib/components/StatsCard.svelte';
   import RecentEntries from '$lib/components/RecentEntries.svelte';
@@ -14,7 +14,6 @@
   let selectedFilter: FilterPeriod = $state('7d'); // Default to first daily option
   let investments = $state<any[]>([]); // Start empty, will be loaded via API
   let isLoading = $state(true); // Start in loading state
-  // Use loaded investments or empty array
   let displayInvestments = $derived(investments);
   let aggregatedData = $derived(aggregateInvestments(displayInvestments, selectedPeriod, selectedFilter));
   let portfolioStats = $derived(calculateFilteredPortfolioStats(aggregatedData));
@@ -41,28 +40,34 @@
     }
   });
 
-  // Load investments via API call
+  // Load investments via client-side API call
   async function loadInvestments() {
-    isLoading = true;
+    if (!browser) return; // Only run in browser
+    
+    console.log('🚀 Loading investments...');
     try {
       const response = await fetch('/api/investments', {
         credentials: 'include'
       });
+      
       if (response.ok) {
         investments = await response.json();
+        console.log('✅ Successfully loaded', investments.length, 'investments');
       } else {
-        console.error('Failed to load investments:', response.status);
+        console.error('❌ Failed to load investments:', response.status);
       }
     } catch (error) {
-      console.error('Failed to load investments:', error);
+      console.error('❌ Error loading investments:', error);
     } finally {
       isLoading = false;
     }
   }
 
-  // Load data when component mounts
-  onMount(() => {
-    loadInvestments();
+  // Load data when component is in browser
+  $effect(() => {
+    if (browser && isLoading && investments.length === 0) {
+      loadInvestments();
+    }
   });
 
   // Refresh data after CSV import
