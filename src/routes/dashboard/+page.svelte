@@ -40,9 +40,14 @@
     
     isLoadingInvestments = true;
     try {
-      const response = await fetch('/api/investments');
+      const response = await fetch('/api/investments', {
+        credentials: 'include'
+      });
       if (response.ok) {
         investments = await response.json();
+        console.log(`Loaded ${investments.length} investments`);
+      } else {
+        console.error('Failed to load investments:', response.status, await response.text());
       }
     } catch (error) {
       console.error('Failed to load investments:', error);
