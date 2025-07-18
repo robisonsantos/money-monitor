@@ -65,9 +65,11 @@ const poolConfig: any = {
   password: process.env.DB_PASSWORD || 'password',
   database: process.env.DB_NAME || 'money_monitor',
   ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
-  max: 20, // maximum number of clients in the pool
-  idleTimeoutMillis: 30000, // close idle clients after 30 seconds
-  connectionTimeoutMillis: 2000, // return an error after 2 seconds if connection could not be established
+  max: 10, // maximum number of clients in the pool
+  min: 2, // minimum number of clients in the pool
+  idleTimeoutMillis: 10000, // close idle clients after 10 seconds
+  connectionTimeoutMillis: 5000, // return an error after 5 seconds if connection could not be established
+  acquireTimeoutMillis: 5000, // return an error after 5 seconds if a client cannot be acquired
 };
 
 const pool = new Pool(poolConfig);
@@ -90,6 +92,11 @@ async function setupPostgreSQLSchema() {
     `;
     const result = await client.query(tablesQuery);
     const existingTables = result.rows.map(row => row.table_name);
+
+    if (existingTables.length >= 2) {
+      // Tables already exist, no need to set up schema
+      return;
+    }
 
     if (!existingTables.includes('users') || !existingTables.includes('investments')) {
       console.log('Setting up PostgreSQL schema...');
@@ -173,9 +180,14 @@ async function setupPostgreSQLSchema() {
   }
 }
 
-// Run schema setup on startup (in dev mode)
+// Run schema setup on startup (in dev mode) - only if tables don't exist
 if (dev) {
-  setupPostgreSQLSchema().catch(console.error);
+  setupPostgreSQLSchema().catch(error => {
+    // Don't log schema setup errors in development to avoid noise
+    if (!error.message.includes('already exists')) {
+      console.error('Schema setup error:', error.message);
+    }
+  });
 }
 
 export interface User {
@@ -430,6 +442,41 @@ export const investmentDb = {
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
+    } finally {
+      client.release();
+    }
+  },
+
+  // Get recent investments with previous values in a single efficient query
+  getRecentInvestmentsWithChanges: async (userId: number, limit: number = 20): Promise<any[]> => {
+    const client = await pool.connect();
+    try {
+      const result = await client.query(`
+        SELECT 
+          curr.*,
+          LAG(curr.value) OVER (ORDER BY curr.date) as prev_value
+        FROM investments curr
+        WHERE curr.user_id = $1
+        ORDER BY curr.date DESC
+        LIMIT $2
+      `, [userId, limit]);
+      
+      return result.rows.map(investment => {
+        const decryptedValue = decryptValue(investment.value);
+        const decryptedPrevValue = investment.prev_value ? decryptValue(investment.prev_value) : null;
+        
+        const change = decryptedPrevValue ? decryptedValue - decryptedPrevValue : 0;
+        const changePercent = decryptedPrevValue ? (change / decryptedPrevValue) * 100 : 0;
+        
+        return {
+          ...investment,
+          date: investment.date instanceof Date ? investment.date.toISOString().split('T')[0] : investment.date,
+          value: decryptedValue,
+          prev_value: decryptedPrevValue,
+          change,
+          changePercent
+        };
+      });
     } finally {
       client.release();
     }
