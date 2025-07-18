@@ -1,5 +1,6 @@
 import { format, startOfWeek, startOfMonth, parseISO, isWithinInterval } from 'date-fns';
 import type { Investment } from './database';
+import { sanitizeCSVValue } from './sanitize';
 
 export interface AggregatedData {
   date: string;
@@ -353,11 +354,13 @@ export function parseCSV(csvContent: string): CSVValidationResult {
     data,
     errors
   };
-}
+  }
 
 export function generateCSV(investments: { date: string; value: number }[]): string {
   const header = 'Date,Value\n';
-  const rows = investments.map(inv => `${inv.date},${inv.value}`).join('\n');
+  const rows = investments.map(inv => 
+    `${sanitizeCSVValue(inv.date)},${sanitizeCSVValue(inv.value.toString())}`
+  ).join('\n');
   return header + rows;
 }
 

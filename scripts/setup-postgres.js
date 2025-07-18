@@ -42,8 +42,8 @@ async function setupDatabase() {
     await client.query(schema);
     console.log('Database schema created successfully');
 
-    // Create default dev user if in development
-    if (process.env.NODE_ENV !== 'production') {
+    // Create default dev user ONLY in explicit development mode
+    if (process.env.NODE_ENV === 'development') {
       console.log('Creating default development user...');
       
       const bcrypt = await import('bcrypt');

@@ -12,6 +12,7 @@
     "seed": "node scripts/seed.js",
     "db:setup": "node scripts/setup-postgres.js",
     "db:migrate": "node scripts/migrate-sqlite-to-postgres.js",
+    "db:cleanup-sessions": "node scripts/cleanup-sessions.js",
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest --coverage",
