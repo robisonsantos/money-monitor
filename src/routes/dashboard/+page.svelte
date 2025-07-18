@@ -135,8 +135,8 @@
       <p class="text-gray-600 mb-6">Start tracking your investments by adding your first entry or importing from a CSV file.</p>
       
       <!-- Action Buttons -->
-      <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
-        <a href="/dashboard/add" class="btn-primary">Add First Entry</a>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center items-center w-full max-w-sm mx-auto sm:max-w-none">
+        <a href="/dashboard/add" class="btn-primary w-full sm:w-auto">Add First Entry</a>
         <span class="text-gray-400 hidden sm:block">or</span>
         <div class="w-full sm:w-auto">
           <CSVManager
