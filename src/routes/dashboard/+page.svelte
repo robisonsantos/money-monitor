@@ -18,7 +18,10 @@
   let displayInvestments = $derived(investments.length > 0 ? investments : data.recentEntries || []);
   let aggregatedData = $derived(aggregateInvestments(displayInvestments, selectedPeriod, selectedFilter));
   let portfolioStats = $derived(calculateFilteredPortfolioStats(aggregatedData));
+  // For RecentEntries: always show daily entries for the filtered time period (regardless of view aggregation)
+  let filteredDailyEntries = $derived(aggregateInvestments(displayInvestments, 'daily', selectedFilter));
   let recentEntriesKey = $state(0); // Key to force refresh of RecentEntries
+  let previousPeriod = $state<AggregationPeriod>('daily'); // Track previous period
 
   // Helper function to get default filter for each period
   function getDefaultFilter(period: AggregationPeriod): FilterPeriod {
@@ -30,10 +33,12 @@
     return defaultFilters[period];
   }
 
-  // Set default filter when period changes
+  // Set default filter ONLY when period actually changes (not on every reactive update)
   $effect(() => {
-    const period = selectedPeriod;
-    selectedFilter = getDefaultFilter(period);
+    if (selectedPeriod !== previousPeriod) {
+      selectedFilter = getDefaultFilter(selectedPeriod);
+      previousPeriod = selectedPeriod;
+    }
   });
 
   // Load investments data on demand
@@ -47,12 +52,11 @@
       });
       if (response.ok) {
         investments = await response.json();
-        console.log(`Loaded ${investments.length} investments`);
       } else {
-        console.error('Failed to load investments:', response.status, await response.text());
+        console.error('❌ Failed to load investments:', response.status);
       }
     } catch (error) {
-      console.error('Failed to load investments:', error);
+      console.error('❌ Failed to load investments:', error);
     } finally {
       isLoadingInvestments = false;
     }
@@ -60,9 +64,15 @@
 
   // Load investments when component mounts
   onMount(() => {
-    console.log('Dashboard mounted, recentEntries length:', data.recentEntries?.length || 0);
     loadInvestments();
   });
+
+  // Backup load attempt in case onMount doesn't fire (dev server quirks)
+  setTimeout(() => {
+    if (investments.length === 0 && !isLoadingInvestments) {
+      loadInvestments();
+    }
+  }, 1000);
 
   // Refresh data after CSV import
   function handleImportSuccess() {
@@ -203,6 +213,6 @@
     />
 
     <!-- Recent Entries with Infinite Scroll -->
-    <RecentEntries initialEntries={data.recentEntries} />
+    <RecentEntries filteredInvestments={filteredDailyEntries} isLoading={isLoadingInvestments} />
   {/if}
 </div> 

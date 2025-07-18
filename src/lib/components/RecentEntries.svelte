@@ -1,41 +1,21 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { Edit3, Loader } from 'lucide-svelte';
-  import { formatCurrency, formatDate } from '$lib/utils';
+  import { formatCurrency, formatDate, type AggregatedData } from '$lib/utils';
 
-  interface EnrichedInvestment {
-    id: number;
-    date: string;
-    value: number;
-    change: number;
-    changePercent: number;
-    created_at: string;
-    updated_at: string;
-  }
-
-  interface PaginationInfo {
-    limit: number;
-    offset: number;
-    totalCount: number;
-    hasMore: boolean;
-  }
-
-  // Accept initial data from server
+  // Accept filtered data from parent dashboard
   interface Props {
-    initialEntries?: EnrichedInvestment[];
+    filteredInvestments?: AggregatedData[];
+    isLoading?: boolean;
   }
   
-  let { initialEntries = [] }: Props = $props();
+  let { filteredInvestments = [], isLoading = false }: Props = $props();
 
-  let entries = $state<EnrichedInvestment[]>(initialEntries);
-  let isLoading = $state(false);
+  let displayedEntries = $state<AggregatedData[]>([]);
   let isLoadingMore = $state(false);
   let hasMore = $state(true);
-  let error = $state('');
   let sentinelElement = $state<HTMLDivElement>();
   let scrollContainer = $state<HTMLDivElement>();
-
-
 
   const ITEMS_PER_PAGE = 20;
 
@@ -45,38 +25,35 @@
     window.location.reload();
   }
 
-  async function loadMoreEntries(offset: number) {
-    isLoadingMore = true;
-    error = '';
-
-    try {
-      const url = `/api/investments/recent?limit=${ITEMS_PER_PAGE}&offset=${offset}`;
-      const response = await fetch(url, {
-        credentials: 'include'
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch recent entries: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      const newEntries = data.investments as EnrichedInvestment[];
-      const pagination = data.pagination as PaginationInfo;
-
-      // Always append to existing entries
-      entries = [...entries, ...newEntries];
-      hasMore = pagination.hasMore;
-      
-      // Debug logging
-      console.log(`Loaded ${newEntries.length} more entries, total: ${entries.length}, hasMore: ${hasMore}`);
-    } catch (err) {
-      console.error('Failed to load more entries:', err);
-      error = err instanceof Error ? err.message : 'Failed to load entries';
-      // If there's an error, assume no more entries to prevent infinite loading
+  // Reset displayed entries when filtered data changes
+  $effect(() => {
+    if (filteredInvestments.length > 0) {
+      // Sort by date descending (most recent first)
+      const sorted = [...filteredInvestments].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      displayedEntries = sorted.slice(0, ITEMS_PER_PAGE);
+      hasMore = sorted.length > ITEMS_PER_PAGE;
+    } else {
+      displayedEntries = [];
       hasMore = false;
-    } finally {
-      isLoadingMore = false;
     }
+  });
+
+  function loadMoreEntries() {
+    if (!hasMore || isLoadingMore || isLoading) return;
+
+    isLoadingMore = true;
+    
+    // Simulate loading delay for smooth UX
+    setTimeout(() => {
+      const sorted = [...filteredInvestments].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      const currentLength = displayedEntries.length;
+      const nextBatch = sorted.slice(currentLength, currentLength + ITEMS_PER_PAGE);
+      
+      displayedEntries = [...displayedEntries, ...nextBatch];
+      hasMore = displayedEntries.length < sorted.length;
+      
+      isLoadingMore = false;
+    }, 100);
   }
 
   function setupIntersectionObserver() {
@@ -86,14 +63,12 @@
       (observerEntries) => {
         const entry = observerEntries[0];
         if (entry.isIntersecting && hasMore && !isLoadingMore && !isLoading) {
-          // Load more entries starting from current length
-          const currentOffset = entries.length;
-          loadMoreEntries(currentOffset);
+          loadMoreEntries();
         }
       },
       {
-        root: scrollContainer, // Use the scroll container as the root instead of viewport
-        rootMargin: '50px', // Start loading when 50px away from the sentinel
+        root: scrollContainer,
+        rootMargin: '50px',
         threshold: 0.1
       }
     );
@@ -107,15 +82,7 @@
 
   // Set up intersection observer for infinite scroll
   $effect(() => {
-    if (sentinelElement && scrollContainer) {
-      console.log(`RecentEntries: Setting up infinite scroll with ${entries.length} entries, hasMore: ${hasMore}`);
-      return setupIntersectionObserver();
-    }
-  });
-
-  // Re-setup observer when sentinel element changes
-  $effect(() => {
-    if (sentinelElement && scrollContainer && entries.length > 0) {
+    if (sentinelElement && scrollContainer && displayedEntries.length > 0) {
       return setupIntersectionObserver();
     }
   });
@@ -131,15 +98,12 @@
   
 
   
-  {#if error && entries.length === 0}
+  {#if isLoading && displayedEntries.length === 0}
     <div class="text-center py-8">
-      <p class="text-red-600 mb-4">{error}</p>
-      <button 
-        onclick={() => window.location.reload()} 
-        class="btn-secondary"
-      >
-        Try Again
-      </button>
+      <div class="flex items-center justify-center space-x-2">
+        <Loader class="w-5 h-5 animate-spin text-primary-600" />
+        <span class="text-gray-600">Loading entries...</span>
+      </div>
     </div>
   {:else}
     <!-- Fixed height scrollable container -->
@@ -158,41 +122,32 @@
           </tr>
         </thead>
         <tbody>
-          {#if isLoading}
-            <tr>
-              <td colspan="5" class="py-8 text-center">
-                <div class="flex items-center justify-center space-x-2">
-                  <Loader class="w-5 h-5 animate-spin text-primary-600" />
-                  <span class="text-gray-600">Loading entries...</span>
-                </div>
-              </td>
-            </tr>
-          {:else if entries.length === 0}
+          {#if displayedEntries.length === 0}
             <tr>
               <td colspan="5" class="py-8 text-center text-gray-500">
-                No entries found
+                No entries found for the selected filter
               </td>
             </tr>
           {:else}
-            {#each entries as entry (entry.id)}
+            {#each displayedEntries as entry}
               <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                 <td class="py-3 px-4 text-gray-900">{formatDate(entry.date)}</td>
                 <td class="py-3 px-4 text-right font-medium text-gray-900">
                   {formatCurrency(entry.value)}
                 </td>
                 <td class="py-3 px-4 text-right font-medium {
-                  entry.change >= 0 ? 'text-success-600' : 'text-danger-600'
+                  (entry.change ?? 0) >= 0 ? 'text-success-600' : 'text-danger-600'
                 }">
-                  {entry.change !== 0 ? 
-                    ((entry.change >= 0 ? '+' : '') + formatCurrency(entry.change)) : 
+                  {(entry.change ?? 0) !== 0 ? 
+                    (((entry.change ?? 0) >= 0 ? '+' : '') + formatCurrency(entry.change ?? 0)) : 
                     '-'
                   }
                 </td>
                 <td class="py-3 px-4 text-right font-medium {
-                  entry.changePercent >= 0 ? 'text-success-600' : 'text-danger-600'
+                  (entry.changePercent ?? 0) >= 0 ? 'text-success-600' : 'text-danger-600'
                 }">
-                  {entry.changePercent !== 0 ? 
-                    ((entry.changePercent >= 0 ? '+' : '') + entry.changePercent.toFixed(2) + '%') : 
+                  {(entry.changePercent ?? 0) !== 0 ? 
+                    (((entry.changePercent ?? 0) >= 0 ? '+' : '') + (entry.changePercent ?? 0).toFixed(2) + '%') : 
                     '-'
                   }
                 </td>
@@ -212,7 +167,7 @@
       </table>
 
       <!-- Infinite scroll sentinel and loading indicator inside the scroll container -->
-      {#if entries.length > 0}
+      {#if displayedEntries.length > 0}
         <div bind:this={sentinelElement} class="py-4 bg-white">
           {#if isLoadingMore}
             <div class="flex items-center justify-center space-x-2">
@@ -221,7 +176,10 @@
             </div>
           {:else if !hasMore}
             <div class="text-center text-sm text-gray-500">
-              You've reached the end of your investment history
+              {filteredInvestments.length === displayedEntries.length ? 
+                `Showing all ${filteredInvestments.length} entries` :
+                `You've reached the end of the filtered results (${displayedEntries.length} of ${filteredInvestments.length} entries)`
+              }
             </div>
           {/if}
         </div>
