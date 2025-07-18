@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import Chart from '$lib/components/Chart.svelte';
   import StatsCard from '$lib/components/StatsCard.svelte';
   import RecentEntries from '$lib/components/RecentEntries.svelte';
@@ -12,10 +11,9 @@
 
   let selectedPeriod: AggregationPeriod = $state('daily');
   let selectedFilter: FilterPeriod = $state('7d'); // Default to first daily option
-  let investments = $state([]); // Start with empty array, load on demand
-  let isLoadingInvestments = $state(false);
-  // Use client-loaded investments if available, otherwise fall back to server-loaded recentEntries for initial display
-  let displayInvestments = $derived(investments.length > 0 ? investments : data.recentEntries || []);
+  let investments = $state(data.allInvestments || []); // Use server-loaded data directly
+  // Always use the server-loaded investments
+  let displayInvestments = $derived(investments);
   let aggregatedData = $derived(aggregateInvestments(displayInvestments, selectedPeriod, selectedFilter));
   let portfolioStats = $derived(calculateFilteredPortfolioStats(aggregatedData));
   // For RecentEntries: always show daily entries for the filtered time period (regardless of view aggregation)
@@ -40,39 +38,6 @@
       previousPeriod = selectedPeriod;
     }
   });
-
-  // Load investments data on demand
-  async function loadInvestments() {
-    if (isLoadingInvestments) return;
-    
-    isLoadingInvestments = true;
-    try {
-      const response = await fetch('/api/investments', {
-        credentials: 'include'
-      });
-      if (response.ok) {
-        investments = await response.json();
-      } else {
-        console.error('❌ Failed to load investments:', response.status);
-      }
-    } catch (error) {
-      console.error('❌ Failed to load investments:', error);
-    } finally {
-      isLoadingInvestments = false;
-    }
-  }
-
-  // Load investments when component mounts
-  onMount(() => {
-    loadInvestments();
-  });
-
-  // Backup load attempt in case onMount doesn't fire (dev server quirks)
-  setTimeout(() => {
-    if (investments.length === 0 && !isLoadingInvestments) {
-      loadInvestments();
-    }
-  }, 1000);
 
   // Refresh data after CSV import
   function handleImportSuccess() {
@@ -138,14 +103,7 @@
     {/if}
   </div>
 
-  {#if isLoadingInvestments}
-    <!-- Loading State -->
-    <div class="text-center py-12">
-      <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-      <h2 class="text-xl font-semibold text-gray-900 mb-2">Loading your investments...</h2>
-      <p class="text-gray-600">Please wait while we fetch your data.</p>
-    </div>
-  {:else if displayInvestments.length === 0}
+  {#if displayInvestments.length === 0}
     <!-- Empty State -->
     <div class="text-center py-12">
       <BarChart3 class="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -213,6 +171,6 @@
     />
 
     <!-- Recent Entries with Infinite Scroll -->
-    <RecentEntries filteredInvestments={filteredDailyEntries} isLoading={isLoadingInvestments} />
+    <RecentEntries filteredInvestments={filteredDailyEntries} />
   {/if}
 </div> 
