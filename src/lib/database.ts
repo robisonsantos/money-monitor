@@ -9,10 +9,19 @@ const { Pool } = pg;
 const ENCRYPTION_ALGORITHM = 'aes-256-gcm';
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'your-32-byte-secret-key-here-for-dev!'; // In production, use a proper 32-byte key
 
+// Cache the derived key to avoid expensive scryptSync calls
+let cachedKey: Buffer | null = null;
+function getDerivedKey(): Buffer {
+  if (!cachedKey) {
+    cachedKey = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
+  }
+  return cachedKey;
+}
+
 // Encryption utilities
 function encryptValue(value: number): string {
   const iv = crypto.randomBytes(16);
-  const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
+  const key = getDerivedKey();
   const cipher = crypto.createCipheriv(ENCRYPTION_ALGORITHM, key, iv);
   cipher.setAAD(Buffer.from('investment-value', 'utf8'));
   
@@ -35,7 +44,7 @@ function decryptValue(encryptedValue: string): number {
     
     const iv = Buffer.from(ivHex, 'hex');
     const authTag = Buffer.from(authTagHex, 'hex');
-    const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
+    const key = getDerivedKey(); // Use cached key instead of computing each time
     
     const decipher = crypto.createDecipheriv(ENCRYPTION_ALGORITHM, key, iv);
     decipher.setAAD(Buffer.from('investment-value', 'utf8'));
@@ -66,10 +75,10 @@ const poolConfig: any = {
   database: process.env.DB_NAME || 'money_monitor',
   ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
   max: 10, // maximum number of clients in the pool
-  min: 2, // minimum number of clients in the pool
-  idleTimeoutMillis: 10000, // close idle clients after 10 seconds
-  connectionTimeoutMillis: 5000, // return an error after 5 seconds if connection could not be established
-  acquireTimeoutMillis: 5000, // return an error after 5 seconds if a client cannot be acquired
+  min: 1, // minimum number of clients in the pool
+  idleTimeoutMillis: 30000, // close idle clients after 30 seconds
+  connectionTimeoutMillis: 30000, // return an error after 30 seconds if connection could not be established
+  acquireTimeoutMillis: 30000, // return an error after 30 seconds if a client cannot be acquired
 };
 
 const pool = new Pool(poolConfig);
@@ -77,8 +86,24 @@ const pool = new Pool(poolConfig);
 // Handle pool errors
 pool.on('error', (err, client) => {
   console.error('Unexpected error on idle PostgreSQL client', err);
-  process.exit(-1);
 });
+
+// Test connection on startup
+pool.on('connect', (client) => {
+  console.log('New PostgreSQL client connected');
+});
+
+// Add connection test
+if (dev) {
+  pool.connect((err, client, release) => {
+    if (err) {
+      console.error('Error connecting to PostgreSQL:', err);
+    } else {
+      console.log('PostgreSQL connection test successful');
+      release();
+    }
+  });
+}
 
 // Migration function to set up PostgreSQL schema
 async function setupPostgreSQLSchema() {
@@ -99,7 +124,7 @@ async function setupPostgreSQLSchema() {
     }
 
     if (!existingTables.includes('users') || !existingTables.includes('investments')) {
-      console.log('Setting up PostgreSQL schema...');
+      if (dev) console.log('Setting up PostgreSQL schema...');
       
       // Create users table
       await client.query(`
@@ -167,10 +192,10 @@ async function setupPostgreSQLSchema() {
           VALUES ($1, $2, $3)
           ON CONFLICT (email) DO NOTHING
         `, ['admin@moneymonitor.com', defaultPassword, 'Admin User']);
-        console.log('Default user created: admin@moneymonitor.com / 123456');
+        if (dev) console.log('Default user created: admin@moneymonitor.com / 123456');
       }
 
-      console.log('PostgreSQL schema setup completed');
+      if (dev) console.log('PostgreSQL schema setup completed');
     }
   } catch (error) {
     console.error('Error setting up PostgreSQL schema:', error);
