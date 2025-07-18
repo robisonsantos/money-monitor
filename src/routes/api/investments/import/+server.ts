@@ -3,8 +3,13 @@ import { investmentDb } from '$lib/database';
 import { parseCSV } from '$lib/utils';
 import type { RequestHandler } from './$types';
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
   try {
+    // Check if user is authenticated
+    if (!locals.user) {
+      return json({ error: 'Authentication required' }, { status: 401 });
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
 
@@ -39,7 +44,7 @@ export const POST: RequestHandler = async ({ request }) => {
     }
 
     // Import the data using bulk insert (will override existing dates)
-    const insertedCount = investmentDb.bulkInsertInvestments(parseResult.data);
+    const insertedCount = await investmentDb.bulkInsertInvestments(locals.user.id, parseResult.data);
 
     return json({ 
       message: `Successfully imported ${insertedCount} investment entries`,

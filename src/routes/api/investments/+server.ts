@@ -9,7 +9,7 @@ export const GET: RequestHandler = async ({ locals }) => {
       return json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    const investments = investmentDb.getAllInvestments(locals.user.id);
+    const investments = await investmentDb.getAllInvestments(locals.user.id);
     return json(investments);
   } catch (error) {
     console.error('Error fetching investments:', error);
@@ -41,7 +41,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     }
 
     // Check if investment already exists for this date (user-scoped)
-    const existingInvestment = investmentDb.getInvestment(locals.user.id, date);
+    const existingInvestment = await investmentDb.getInvestment(locals.user.id, date);
     if (existingInvestment) {
       return json({ 
         error: `An investment entry already exists for ${date}. Use the edit functionality to update it.`,
@@ -49,8 +49,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       }, { status: 409 }); // 409 Conflict
     }
 
-    investmentDb.addInvestment(locals.user.id, date, value);
-    const investment = investmentDb.getInvestment(locals.user.id, date);
+    await investmentDb.addInvestment(locals.user.id, date, value);
+    const investment = await investmentDb.getInvestment(locals.user.id, date);
     
     return json(investment, { status: 201 });
   } catch (error) {
@@ -83,13 +83,13 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
     }
 
     // Check if investment exists (user-scoped)
-    const existingInvestment = investmentDb.getInvestment(locals.user.id, date);
+    const existingInvestment = await investmentDb.getInvestment(locals.user.id, date);
     if (!existingInvestment) {
       return json({ error: 'Investment not found for this date' }, { status: 404 });
     }
 
-    investmentDb.addInvestment(locals.user.id, date, value); // This will update the existing entry
-    const updatedInvestment = investmentDb.getInvestment(locals.user.id, date);
+    await investmentDb.addInvestment(locals.user.id, date, value); // This will update the existing entry
+    const updatedInvestment = await investmentDb.getInvestment(locals.user.id, date);
     
     return json(updatedInvestment, { status: 200 });
   } catch (error) {
@@ -98,9 +98,14 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
   }
 };
 
-export const DELETE: RequestHandler = async () => {
+export const DELETE: RequestHandler = async ({ locals }) => {
   try {
-    investmentDb.clearAllInvestments();
+    // Check if user is authenticated
+    if (!locals.user) {
+      return json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    await investmentDb.clearAllInvestments(locals.user.id);
     return json({ message: 'All investments cleared' }, { status: 200 });
   } catch (error) {
     console.error('Error clearing investments:', error);

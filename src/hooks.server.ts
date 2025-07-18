@@ -11,7 +11,7 @@ export const handle: Handle = async ({ event, resolve }) => {
       // In a real app, you'd store sessions in a table, but for simplicity
       // we'll decode the user ID from the session token (base64 encoded)
       const userId = parseInt(Buffer.from(sessionToken, 'base64').toString());
-      const user = userDb.getUserById(userId);
+      const user = await userDb.getUserById(userId);
       
       if (user) {
         event.locals.user = {

@@ -22,7 +22,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
     }
 
     // Check if user already exists
-    const existingUser = userDb.getUserByEmail(email);
+    const existingUser = await userDb.getUserByEmail(email);
     if (existingUser) {
       return json({ error: 'User with this email already exists' }, { status: 400 });
     }

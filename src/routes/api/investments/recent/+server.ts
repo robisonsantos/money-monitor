@@ -2,8 +2,13 @@ import { json } from '@sveltejs/kit';
 import { investmentDb } from '$lib/database';
 import type { RequestHandler } from './$types';
 
-export const GET: RequestHandler = async ({ url }) => {
+export const GET: RequestHandler = async ({ url, locals }) => {
   try {
+    // Check if user is authenticated
+    if (!locals.user) {
+      return json({ error: 'Authentication required' }, { status: 401 });
+    }
+
     const limitParam = url.searchParams.get('limit');
     const offsetParam = url.searchParams.get('offset');
     
@@ -19,30 +24,33 @@ export const GET: RequestHandler = async ({ url }) => {
       return json({ error: 'Offset must be non-negative' }, { status: 400 });
     }
     
-    const investments = investmentDb.getInvestmentsPaginated(limit, offset);
+    const investments = await investmentDb.getInvestmentsPaginated(locals.user.id, limit, offset);
     
     // Calculate changes for each investment efficiently
-    const enrichedInvestments = investments.map((investment) => {
-      let change = 0;
-      let changePercent = 0;
-      
-      // Get the investment with its previous value in a single query
-      const investmentWithPrev = investmentDb.getInvestmentWithPrevious(investment.date);
-      
-      if (investmentWithPrev && investmentWithPrev.prev_value !== null) {
-        change = investment.value - investmentWithPrev.prev_value;
-        changePercent = (change / investmentWithPrev.prev_value) * 100;
-      }
-      
-      return {
-        ...investment,
-        change,
-        changePercent
-      };
-    });
+    const enrichedInvestments = await Promise.all(
+      investments.map(async (investment) => {
+        let change = 0;
+        let changePercent = 0;
+        
+        // Get the investment with its previous value in a single query
+        const investmentWithPrev = await investmentDb.getInvestmentWithPrevious(locals.user!.id, investment.date);
+        
+        if (investmentWithPrev && investmentWithPrev.prev_value !== null) {
+          change = investment.value - investmentWithPrev.prev_value;
+          changePercent = (change / investmentWithPrev.prev_value) * 100;
+        }
+        
+        return {
+          ...investment,
+          change,
+          changePercent
+        };
+      })
+    );
     
     // Get total count for pagination info
-    const totalCount = investmentDb.getAllInvestments().length;
+    const allInvestments = await investmentDb.getAllInvestments(locals.user.id);
+    const totalCount = allInvestments.length;
     const hasMore = offset + limit < totalCount;
     
     return json({
