@@ -53,7 +53,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     }, { status: 200 });
 
   } catch (error) {
+    // Log detailed error for debugging but don't expose to client
     console.error('Error importing CSV:', error);
-    return json({ error: 'Failed to import CSV file' }, { status: 500 });
+    return json({ error: 'Unable to import file' }, { status: 500 });
   }
 }; 

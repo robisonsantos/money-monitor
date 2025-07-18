@@ -18,8 +18,9 @@ export const GET: RequestHandler = async ({ params, locals }) => {
     
     return json(investment);
   } catch (error) {
+    // Log detailed error for debugging but don't expose to client
     console.error('Error fetching investment:', error);
-    return json({ error: 'Failed to fetch investment' }, { status: 500 });
+    return json({ error: 'Unable to retrieve data' }, { status: 500 });
   }
 };
 
@@ -40,7 +41,8 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
     await investmentDb.deleteInvestment(locals.user.id, date);
     return json({ message: 'Investment deleted successfully' });
   } catch (error) {
+    // Log detailed error for debugging but don't expose to client
     console.error('Error deleting investment:', error);
-    return json({ error: 'Failed to delete investment' }, { status: 500 });
+    return json({ error: 'Unable to delete data' }, { status: 500 });
   }
 };

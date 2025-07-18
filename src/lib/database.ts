@@ -7,7 +7,17 @@ const { Pool } = pg;
 
 // Encryption configuration
 const ENCRYPTION_ALGORITHM = 'aes-256-gcm';
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'your-32-byte-secret-key-here-for-dev!'; // In production, use a proper 32-byte key
+
+// Validate encryption key
+let ENCRYPTION_KEY: string = process.env.ENCRYPTION_KEY || '';
+if (!ENCRYPTION_KEY) {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('ENCRYPTION_KEY environment variable is required in production');
+  }
+  // Use development key only in development
+  ENCRYPTION_KEY = 'your-32-byte-secret-key-here-for-dev!';
+  console.warn('⚠️  Using default encryption key for development. Set ENCRYPTION_KEY environment variable.');
+}
 
 // Cache the derived key to avoid expensive scryptSync calls
 let cachedKey: Buffer | null = null;
@@ -150,11 +160,26 @@ async function setupPostgreSQLSchema() {
         )
       `);
 
+      // Create sessions table
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS sessions (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          token VARCHAR(64) NOT NULL UNIQUE,
+          expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
       // Create indexes
       await client.query(`CREATE INDEX IF NOT EXISTS idx_investments_user_date ON investments(user_id, date)`);
       await client.query(`CREATE INDEX IF NOT EXISTS idx_investments_date ON investments(date)`);
       await client.query(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`);
       await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_investments_user_date_unique ON investments(user_id, date)`);
+      await client.query(`CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token)`);
+      await client.query(`CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)`);
+      await client.query(`CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at)`);
 
       // Create update trigger function
       await client.query(`
@@ -184,15 +209,23 @@ async function setupPostgreSQLSchema() {
             EXECUTE FUNCTION update_updated_at_column()
       `);
 
-      // Create default dev user if in development
-      if (dev) {
+      await client.query(`
+        DROP TRIGGER IF EXISTS update_sessions_updated_at ON sessions;
+        CREATE TRIGGER update_sessions_updated_at 
+            BEFORE UPDATE ON sessions 
+            FOR EACH ROW 
+            EXECUTE FUNCTION update_updated_at_column()
+      `);
+
+      // Create default dev user ONLY in explicit development mode
+      if (dev && process.env.NODE_ENV === 'development') {
         const defaultPassword = await bcrypt.hash('123456', 10);
         await client.query(`
           INSERT INTO users (email, password_hash, name) 
           VALUES ($1, $2, $3)
           ON CONFLICT (email) DO NOTHING
         `, ['admin@moneymonitor.com', defaultPassword, 'Admin User']);
-        if (dev) console.log('Default user created: admin@moneymonitor.com / 123456');
+        console.log('Default user created: admin@moneymonitor.com / 123456');
       }
 
       if (dev) console.log('PostgreSQL schema setup completed');
@@ -215,6 +248,16 @@ if (dev) {
   });
 }
 
+// Start periodic session cleanup (every hour)
+setInterval(async () => {
+  try {
+    await sessionDb.cleanupExpiredSessions();
+    if (dev) console.log('Cleaned up expired sessions');
+  } catch (error) {
+    console.error('Error cleaning up sessions:', error);
+  }
+}, 60 * 60 * 1000); // 1 hour
+
 export interface User {
   id: number;
   email: string;
@@ -222,6 +265,15 @@ export interface User {
   name?: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface Session {
+  id: string;
+  user_id: number;
+  token: string;
+  expires_at: Date;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export interface Investment {
@@ -285,6 +337,84 @@ export const userDb = {
       client.release();
     }
   },
+};
+
+export const sessionDb = {
+  // Create a new session
+  createSession: async (userId: number, token: string, expiresAt: Date): Promise<Session> => {
+    const client = await pool.connect();
+    try {
+      const result = await client.query(
+        'INSERT INTO sessions (user_id, token, expires_at) VALUES ($1, $2, $3) RETURNING *',
+        [userId, token, expiresAt]
+      );
+      return result.rows[0];
+    } finally {
+      client.release();
+    }
+  },
+
+  // Get session by token
+  getSession: async (token: string): Promise<Session | undefined> => {
+    const client = await pool.connect();
+    try {
+      const result = await client.query(
+        'SELECT * FROM sessions WHERE token = $1 AND expires_at > NOW()',
+        [token]
+      );
+      return result.rows[0];
+    } finally {
+      client.release();
+    }
+  },
+
+  // Update session expiration
+  updateSessionExpiration: async (token: string, expiresAt: Date): Promise<void> => {
+    const client = await pool.connect();
+    try {
+      await client.query(
+        'UPDATE sessions SET expires_at = $1, updated_at = CURRENT_TIMESTAMP WHERE token = $2',
+        [expiresAt, token]
+      );
+    } finally {
+      client.release();
+    }
+  },
+
+  // Delete session (logout)
+  deleteSession: async (token: string): Promise<void> => {
+    const client = await pool.connect();
+    try {
+      await client.query('DELETE FROM sessions WHERE token = $1', [token]);
+    } finally {
+      client.release();
+    }
+  },
+
+  // Delete all sessions for a user
+  deleteUserSessions: async (userId: number): Promise<void> => {
+    const client = await pool.connect();
+    try {
+      await client.query('DELETE FROM sessions WHERE user_id = $1', [userId]);
+    } finally {
+      client.release();
+    }
+  },
+
+  // Clean up expired sessions
+  cleanupExpiredSessions: async (): Promise<void> => {
+    const client = await pool.connect();
+    try {
+      await client.query('DELETE FROM sessions WHERE expires_at <= NOW()');
+    } finally {
+      client.release();
+    }
+  },
+
+  // Generate secure session token
+  generateSessionToken: (): string => {
+    return crypto.randomBytes(32).toString('hex');
+  }
 };
 
 export const investmentDb = {

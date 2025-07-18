@@ -21,10 +21,23 @@ CREATE TABLE IF NOT EXISTS investments (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Create sessions table for secure session management
+CREATE TABLE IF NOT EXISTS sessions (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token VARCHAR(64) NOT NULL UNIQUE,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_investments_user_date ON investments(user_id, date);
 CREATE INDEX IF NOT EXISTS idx_investments_date ON investments(date);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token);
+CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
 
 -- Create unique constraint on user_id + date combination
 CREATE UNIQUE INDEX IF NOT EXISTS idx_investments_user_date_unique ON investments(user_id, date);
@@ -48,5 +61,11 @@ CREATE TRIGGER update_users_updated_at
 DROP TRIGGER IF EXISTS update_investments_updated_at ON investments;
 CREATE TRIGGER update_investments_updated_at 
     BEFORE UPDATE ON investments 
+    FOR EACH ROW 
+    EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_sessions_updated_at ON sessions;
+CREATE TRIGGER update_sessions_updated_at 
+    BEFORE UPDATE ON sessions 
     FOR EACH ROW 
     EXECUTE FUNCTION update_updated_at_column(); 

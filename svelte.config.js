@@ -6,10 +6,9 @@ const config = {
 	preprocess: vitePreprocess(),
 	kit: {
 		adapter: adapter(),
-		// In development, disable CSRF for easier API testing
-		// In production, you should enable this and handle CSRF tokens properly
+		// Enable CSRF protection in all environments for security
 		csrf: {
-			checkOrigin: process.env.NODE_ENV === 'production'
+			checkOrigin: true
 		}
 	}
 };

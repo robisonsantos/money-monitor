@@ -12,8 +12,9 @@ export const GET: RequestHandler = async ({ locals }) => {
     const investments = await investmentDb.getAllInvestments(locals.user.id);
     return json(investments);
   } catch (error) {
+    // Log detailed error for debugging but don't expose to client
     console.error('Error fetching investments:', error);
-    return json({ error: 'Failed to fetch investments' }, { status: 500 });
+    return json({ error: 'Unable to retrieve data' }, { status: 500 });
   }
 };
 
@@ -54,8 +55,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     
     return json(investment, { status: 201 });
   } catch (error) {
+    // Log detailed error for debugging but don't expose to client
     console.error('Error adding investment:', error);
-    return json({ error: 'Failed to add investment' }, { status: 500 });
+    return json({ error: 'Unable to save data' }, { status: 500 });
   }
 };
 
@@ -93,8 +95,9 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
     
     return json(updatedInvestment, { status: 200 });
   } catch (error) {
+    // Log detailed error for debugging but don't expose to client
     console.error('Error updating investment:', error);
-    return json({ error: 'Failed to update investment' }, { status: 500 });
+    return json({ error: 'Unable to update data' }, { status: 500 });
   }
 };
 
@@ -108,7 +111,8 @@ export const DELETE: RequestHandler = async ({ locals }) => {
     await investmentDb.clearAllInvestments(locals.user.id);
     return json({ message: 'All investments cleared' }, { status: 200 });
   } catch (error) {
+    // Log detailed error for debugging but don't expose to client
     console.error('Error clearing investments:', error);
-    return json({ error: 'Failed to clear investments' }, { status: 500 });
+    return json({ error: 'Unable to clear data' }, { status: 500 });
   }
 };
