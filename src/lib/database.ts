@@ -62,7 +62,7 @@ const poolConfig: any = {
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432'),
   user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || undefined,
+  password: process.env.DB_PASSWORD || 'password',
   database: process.env.DB_NAME || 'money_monitor',
   ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
   max: 20, // maximum number of clients in the pool
@@ -277,6 +277,7 @@ export const investmentDb = {
       );
       const investment = result.rows[0];
       if (investment) {
+        investment.date = investment.date instanceof Date ? investment.date.toISOString().split('T')[0] : investment.date;
         investment.value = decryptValue(investment.value);
       }
       return investment;
@@ -295,6 +296,7 @@ export const investmentDb = {
       );
       return result.rows.map(investment => ({
         ...investment,
+        date: investment.date instanceof Date ? investment.date.toISOString().split('T')[0] : investment.date,
         value: decryptValue(investment.value)
       }));
     } finally {
@@ -312,6 +314,7 @@ export const investmentDb = {
       );
       return result.rows.map(investment => ({
         ...investment,
+        date: investment.date instanceof Date ? investment.date.toISOString().split('T')[0] : investment.date,
         value: decryptValue(investment.value)
       }));
     } finally {
@@ -339,6 +342,7 @@ export const investmentDb = {
       );
       const investment = result.rows[0];
       if (investment) {
+        investment.date = investment.date instanceof Date ? investment.date.toISOString().split('T')[0] : investment.date;
         investment.value = decryptValue(investment.value);
       }
       return investment;
@@ -357,6 +361,7 @@ export const investmentDb = {
       );
       return result.rows.map(investment => ({
         ...investment,
+        date: investment.date instanceof Date ? investment.date.toISOString().split('T')[0] : investment.date,
         value: decryptValue(investment.value)
       }));
     } finally {
@@ -382,6 +387,7 @@ export const investmentDb = {
       
       const investment = result.rows[0];
       if (investment) {
+        investment.date = investment.date instanceof Date ? investment.date.toISOString().split('T')[0] : investment.date;
         if (investment.value) investment.value = decryptValue(investment.value);
         if (investment.prev_value) investment.prev_value = decryptValue(investment.prev_value);
       }
