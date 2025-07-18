@@ -5,7 +5,12 @@ import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 const config = {
 	preprocess: vitePreprocess(),
 	kit: {
-		adapter: adapter()
+		adapter: adapter(),
+		// In development, disable CSRF for easier API testing
+		// In production, you should enable this and handle CSRF tokens properly
+		csrf: {
+			checkOrigin: process.env.NODE_ENV === 'production'
+		}
 	}
 };
 
