@@ -58,23 +58,17 @@ function decryptValue(encryptedValue: string): number {
 }
 
 // PostgreSQL connection configuration
-const poolConfig: any = process.env.DATABASE_URL 
-  ? { connectionString: process.env.DATABASE_URL }
-  : {
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '5432'),
-      user: process.env.DB_USER || 'postgres',
-      database: process.env.DB_NAME || 'money_monitor',
-      ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
-      max: 20, // maximum number of clients in the pool
-      idleTimeoutMillis: 30000, // close idle clients after 30 seconds
-      connectionTimeoutMillis: 2000, // return an error after 2 seconds if connection could not be established
-    };
-
-// Only add password if it's explicitly set
-if (process.env.DB_PASSWORD) {
-  poolConfig.password = process.env.DB_PASSWORD;
-}
+const poolConfig: any = {
+  host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT || '5432'),
+  user: process.env.DB_USER || 'postgres',
+  password: process.env.DB_PASSWORD || undefined,
+  database: process.env.DB_NAME || 'money_monitor',
+  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+  max: 20, // maximum number of clients in the pool
+  idleTimeoutMillis: 30000, // close idle clients after 30 seconds
+  connectionTimeoutMillis: 2000, // return an error after 2 seconds if connection could not be established
+};
 
 const pool = new Pool(poolConfig);
 

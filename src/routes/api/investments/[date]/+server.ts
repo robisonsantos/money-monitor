@@ -10,7 +10,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
     }
 
     const { date } = params;
-    const investment = investmentDb.getInvestment(locals.user.id, date);
+    const investment = await investmentDb.getInvestment(locals.user.id, date);
     
     if (!investment) {
       return json({ error: 'Investment not found' }, { status: 404 });
@@ -31,13 +31,13 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
     }
 
     const { date } = params;
-    const investment = investmentDb.getInvestment(locals.user.id, date);
+    const investment = await investmentDb.getInvestment(locals.user.id, date);
     
     if (!investment) {
       return json({ error: 'Investment not found' }, { status: 404 });
     }
     
-    investmentDb.deleteInvestment(locals.user.id, date);
+    await investmentDb.deleteInvestment(locals.user.id, date);
     return json({ message: 'Investment deleted successfully' });
   } catch (error) {
     console.error('Error deleting investment:', error);

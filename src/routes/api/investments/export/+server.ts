@@ -2,8 +2,16 @@ import { investmentDb } from '$lib/database';
 import { aggregateInvestments, generateCSV, type AggregationPeriod, type FilterPeriod } from '$lib/utils';
 import type { RequestHandler } from './$types';
 
-export const GET: RequestHandler = async ({ url }) => {
+export const GET: RequestHandler = async ({ url, locals }) => {
   try {
+    // Check if user is authenticated
+    if (!locals.user) {
+      return new Response(JSON.stringify({ error: 'Authentication required' }), { 
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     const period = (url.searchParams.get('period') as AggregationPeriod) || 'daily';
     const filter = (url.searchParams.get('filter') as FilterPeriod) || 'all';
     
@@ -26,7 +34,7 @@ export const GET: RequestHandler = async ({ url }) => {
     }
 
     // Get all investments and apply filtering
-    const allInvestments = investmentDb.getAllInvestments();
+    const allInvestments = await investmentDb.getAllInvestments(locals.user.id);
     const aggregatedData = aggregateInvestments(allInvestments, period, filter);
     
     if (aggregatedData.length === 0) {
