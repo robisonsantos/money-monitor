@@ -108,6 +108,7 @@
   // Set up intersection observer for infinite scroll
   $effect(() => {
     if (sentinelElement && scrollContainer) {
+      console.log(`RecentEntries: Setting up infinite scroll with ${entries.length} entries, hasMore: ${hasMore}`);
       return setupIntersectionObserver();
     }
   });
