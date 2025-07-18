@@ -32,7 +32,8 @@
 
       const response = await fetch('/api/investments/import', {
         method: 'POST',
-        body: formData
+        body: formData,
+        credentials: 'include'
       });
 
       const result = await response.json();
@@ -51,9 +52,10 @@
         };
       }
     } catch (error) {
+      console.error('CSV import error:', error);
       importResult = {
         success: false,
-        message: 'Failed to import CSV file'
+        message: `Failed to import CSV file: ${error instanceof Error ? error.message : 'Unknown error'}`
       };
     } finally {
       isImporting = false;
@@ -73,7 +75,9 @@
         filter: selectedFilter
       });
 
-      const response = await fetch(`/api/investments/export?${params}`);
+      const response = await fetch(`/api/investments/export?${params}`, {
+        credentials: 'include'
+      });
 
       if (response.ok) {
         // Get the filename from the Content-Disposition header
