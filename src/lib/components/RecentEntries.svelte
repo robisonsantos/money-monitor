@@ -51,7 +51,9 @@
 
     try {
       const url = `/api/investments/recent?limit=${ITEMS_PER_PAGE}&offset=${offset}`;
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        credentials: 'include'
+      });
       
       if (!response.ok) {
         throw new Error(`Failed to fetch recent entries: ${response.status} ${response.statusText}`);
@@ -64,8 +66,14 @@
       // Always append to existing entries
       entries = [...entries, ...newEntries];
       hasMore = pagination.hasMore;
+      
+      // Debug logging
+      console.log(`Loaded ${newEntries.length} more entries, total: ${entries.length}, hasMore: ${hasMore}`);
     } catch (err) {
+      console.error('Failed to load more entries:', err);
       error = err instanceof Error ? err.message : 'Failed to load entries';
+      // If there's an error, assume no more entries to prevent infinite loading
+      hasMore = false;
     } finally {
       isLoadingMore = false;
     }
