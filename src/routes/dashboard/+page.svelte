@@ -120,13 +120,33 @@
     {/if}
   </div>
 
-  {#if investments.length === 0 && !isLoadingInvestments}
+  {#if isLoadingInvestments}
+    <!-- Loading State -->
+    <div class="text-center py-12">
+      <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+      <h2 class="text-xl font-semibold text-gray-900 mb-2">Loading your investments...</h2>
+      <p class="text-gray-600">Please wait while we fetch your data.</p>
+    </div>
+  {:else if investments.length === 0}
     <!-- Empty State -->
     <div class="text-center py-12">
       <BarChart3 class="w-16 h-16 text-gray-400 mx-auto mb-4" />
       <h2 class="text-xl font-semibold text-gray-900 mb-2">No investment data yet</h2>
-      <p class="text-gray-600 mb-6">Start tracking your investments by adding your first entry.</p>
-      <a href="/dashboard/add" class="btn-primary">Add First Entry</a>
+      <p class="text-gray-600 mb-6">Start tracking your investments by adding your first entry or importing from a CSV file.</p>
+      
+      <!-- Action Buttons -->
+      <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+        <a href="/dashboard/add" class="btn-primary">Add First Entry</a>
+        <span class="text-gray-400 hidden sm:block">or</span>
+        <div class="w-full sm:w-auto">
+          <CSVManager
+            selectedPeriod="daily"
+            selectedFilter="all"
+            onImportSuccess={handleImportSuccess}
+            importOnly={true}
+          />
+        </div>
+      </div>
     </div>
   {:else}
     <!-- Stats Cards -->
