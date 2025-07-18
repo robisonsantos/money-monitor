@@ -52,14 +52,36 @@ cd money-monitor
 npm install
 ```
 
-3. **Set up environment variables** (Required for security):
+3. **Set up PostgreSQL database**:
+```bash
+# Make sure PostgreSQL is running locally on port 5432
+# Create the database
+createdb money_monitor
+
+# Or connect to your PostgreSQL instance and run:
+# CREATE DATABASE money_monitor;
+```
+
+4. **Set up environment variables** (Required for security):
 ```bash
 # Create a .env file in the project root
-echo "ENCRYPTION_KEY=$(openssl rand -hex 32)" > .env
+cat > .env << 'EOF'
+# Encryption key for financial data (required)
+ENCRYPTION_KEY=$(openssl rand -hex 32)
+
+# PostgreSQL Database Configuration
+DATABASE_URL=postgresql://postgres:your_password@localhost:5432/money_monitor
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=your_password
+DB_NAME=money_monitor
+DB_SSL=false
+EOF
 ```
 
    **⚠️ Important Security Notes:**
-   - The `ENCRYPTION_KEY` is **required** for the application to function
+   - Both `ENCRYPTION_KEY` and database credentials are **required** for the application to function
    - **Never commit your `.env` file** to version control
    - **Back up your encryption key safely** - losing it means losing access to your encrypted data
    - Use a cryptographically secure 32-byte (64 hex characters) key
@@ -74,25 +96,43 @@ echo "ENCRYPTION_KEY=$(openssl rand -hex 32)" > .env
    python3 -c "import secrets; print(secrets.token_hex(32))"
    ```
 
-4. Set up seed data (optional):
+5. **Set up database schema**:
+```bash
+npm run db:setup
+```
+
+6. **Migrate existing data** (if upgrading from SQLite):
+```bash
+# This will transfer all users and investments from SQLite to PostgreSQL
+npm run db:migrate
+```
+
+7. Set up seed data (optional):
 ```bash
 # Copy the example seed file to create your own
 cp seed/seed_data.example.json seed/seed_data.json
 # Edit seed/seed_data.json with your own data
 ```
 
-5. Start the development server:
+8. Start the development server:
 ```bash
 npm run dev
 ```
 
-6. Open [http://localhost:5173](http://localhost:5173) in your browser
+9. Open [http://localhost:5173](http://localhost:5173) in your browser
 
 ## Environment Variables
 
 | Variable | Required | Description | Example |
 |----------|----------|-------------|---------|
 | `ENCRYPTION_KEY` | ✅ Yes | 32-byte encryption key for financial data security | `a1b2c3d4e5f6...` (64 hex chars) |
+| `DATABASE_URL` | ✅ Yes | PostgreSQL connection string | `postgresql://user:pass@localhost:5432/money_monitor` |
+| `DB_HOST` | ⚠️ Fallback | Database host (used if DATABASE_URL not set) | `localhost` |
+| `DB_PORT` | ⚠️ Fallback | Database port | `5432` |
+| `DB_USER` | ⚠️ Fallback | Database username | `postgres` |
+| `DB_PASSWORD` | ⚠️ Fallback | Database password | `your_password` |
+| `DB_NAME` | ⚠️ Fallback | Database name | `money_monitor` |
+| `DB_SSL` | ❌ No | Enable SSL connection | `true` or `false` |
 
 ## Data Structure
 
@@ -116,14 +156,27 @@ The seed data file (`seed/seed_data.json`) should follow this structure:
 
 ### Database
 
-The application uses SQLite for data storage with the following security features:
+The application uses PostgreSQL for data storage with the following security features:
 
 - **Encrypted Storage**: All financial values are encrypted using AES-256-GCM before storage
 - **User Isolation**: Each user's data is completely isolated and scoped to their account
 - **Session Security**: Secure session management with proper authentication
-- **Database File**: `data.db` is automatically created on first run
+- **ACID Compliance**: PostgreSQL provides robust transaction support and data integrity
+- **Scalability**: Production-ready database that can handle multiple concurrent users
+- **Automatic Schema**: Database tables and indexes are automatically created on first run
 
 Investment entries are stored with daily granularity, and all financial data is transparently encrypted/decrypted during operations.
+
+#### Database Migration
+
+If you're upgrading from a previous SQLite-based version:
+
+1. Ensure your PostgreSQL database is set up and running
+2. Run the migration script: `npm run db:migrate`
+3. The script will automatically transfer all users and encrypted investment data
+4. Database sequences will be updated to handle new inserts correctly
+
+The migration preserves all encryption and user associations.
 
 ## Available Scripts
 
@@ -131,6 +184,8 @@ Investment entries are stored with daily granularity, and all financial data is 
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build
 - `npm run check` - Run Svelte type checking
+- `npm run db:setup` - Set up PostgreSQL database schema and default user
+- `npm run db:migrate` - Migrate data from SQLite to PostgreSQL
 
 ## Testing
 
@@ -207,10 +262,11 @@ When adding new features, please include corresponding tests:
 
 - **Framework**: SvelteKit with Svelte 5 (runes mode)
 - **Styling**: Tailwind CSS
-- **Database**: SQLite with better-sqlite3
+- **Database**: PostgreSQL with pg client library
 - **Charts**: Chart.js
 - **Icons**: Lucide Svelte
 - **Date Handling**: date-fns
+- **Security**: AES-256-GCM encryption, bcrypt password hashing
 
 ## Project Structure
 

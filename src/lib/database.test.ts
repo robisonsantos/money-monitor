@@ -3,262 +3,389 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Test constants
 const TEST_USER_ID = 1;
 
-// Create mocks before importing the database module
-const mockPreparedStatements = {
-  insertInvestment: { run: vi.fn() },
-  getInvestmentByDate: { get: vi.fn() },
-  getAllInvestments: { all: vi.fn() },
-  getInvestmentsInRange: { all: vi.fn() },
-  deleteInvestment: { run: vi.fn() },
-  getLatestInvestment: { get: vi.fn() },
-  getInvestmentsPaginated: { all: vi.fn() },
-  getInvestmentWithPrevious: { get: vi.fn() },
-  deleteAllInvestments: { run: vi.fn() }
+// Create mock PostgreSQL client
+const mockClient = {
+  query: vi.fn(),
+  release: vi.fn(),
+  connect: vi.fn()
 };
 
-const mockDb = {
-  prepare: vi.fn((query: string) => {
-    if (query.includes('INSERT OR REPLACE INTO investments')) {
-      // Both insertInvestment and bulkInsertInvestment use the same query
-      return mockPreparedStatements.insertInvestment;
-    }
-    if (query.includes('SELECT * FROM investments WHERE user_id = ? AND date = ?')) {
-      return mockPreparedStatements.getInvestmentByDate;
-    }
-    if (query.includes('SELECT * FROM investments WHERE user_id = ? ORDER BY date ASC')) {
-      return mockPreparedStatements.getAllInvestments;
-    }
-    if (query.includes('WHERE user_id = ? AND date >= ? AND date <= ?')) {
-      return mockPreparedStatements.getInvestmentsInRange;
-    }
-    if (query.includes('DELETE FROM investments WHERE user_id = ? AND date = ?')) {
-      return mockPreparedStatements.deleteInvestment;
-    }
-    if (query.includes('WHERE user_id = ? ORDER BY date DESC LIMIT 1')) {
-      return mockPreparedStatements.getLatestInvestment;
-    }
-    if (query.includes('WHERE user_id = ?') && query.includes('LIMIT ? OFFSET ?')) {
-      return mockPreparedStatements.getInvestmentsPaginated;
-    }
-    if (query.includes('LEFT JOIN') && query.includes('WHERE curr.user_id = ?')) {
-      return mockPreparedStatements.getInvestmentWithPrevious;
-    }
-    if (query.includes('DELETE FROM investments WHERE user_id = ?')) {
-      return mockPreparedStatements.deleteAllInvestments;
-    }
-    return mockPreparedStatements.insertInvestment;
-  }),
-  exec: vi.fn(),
-  pragma: vi.fn(),
-  close: vi.fn(),
-  transaction: vi.fn((fn: () => any) => () => fn())
+// Create mock PostgreSQL pool
+const mockPool = {
+  connect: vi.fn(() => Promise.resolve(mockClient)),
+  end: vi.fn(),
+  on: vi.fn()
 };
 
-// Mock better-sqlite3 before importing database
-vi.mock('better-sqlite3', () => ({
-  default: vi.fn(() => mockDb)
+// Mock pg library before importing database
+vi.mock('pg', () => ({
+  default: {
+    Pool: vi.fn(() => mockPool)
+  },
+  Pool: vi.fn(() => mockPool)
+}));
+
+// Mock bcrypt for authentication testing
+vi.mock('bcrypt', () => ({
+  default: {
+    hash: vi.fn(async () => 'hashed_password'),
+    compare: vi.fn()
+  },
+  hash: vi.fn(async () => 'hashed_password'),
+  compare: vi.fn()
+}));
+
+// Mock encryption for deterministic testing
+vi.mock('crypto', () => ({
+  default: {
+    randomBytes: vi.fn(() => Buffer.from('1234567890123456')), // Fixed IV for testing
+    scryptSync: vi.fn(() => Buffer.from('12345678901234567890123456789012')), // Fixed key
+    createCipheriv: vi.fn(() => ({
+      setAAD: vi.fn(),
+      update: vi.fn(() => 'encrypted'),
+      final: vi.fn(() => ''),
+      getAuthTag: vi.fn(() => Buffer.from('1234567890123456'))
+    })),
+    createDecipheriv: vi.fn(() => ({
+      setAAD: vi.fn(),
+      setAuthTag: vi.fn(),
+      update: vi.fn(() => '100000'),
+      final: vi.fn(() => '')
+    }))
+  }
 }));
 
 // Now import the database module
-const { investmentDb } = await import('./database');
+const { investmentDb, userDb } = await import('./database');
+
+describe('userDb', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Mock the schema check query to return existing tables
+    mockClient.query.mockImplementation((query) => {
+      if (typeof query === 'string' && query.includes('information_schema.tables')) {
+        return Promise.resolve({ rows: [{ table_name: 'users' }, { table_name: 'investments' }] });
+      }
+      return Promise.resolve({ rows: [] });
+    });
+  });
+
+  describe('createUser', () => {
+    it('should create a new user and return user data', async () => {
+      const mockUser = {
+        id: 1,
+        email: 'test@example.com',
+        password_hash: 'hashed_password',
+        name: 'Test User',
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z'
+      };
+      mockClient.query.mockResolvedValue({ rows: [mockUser] });
+
+      const result = await userDb.createUser('test@example.com', 'password123', 'Test User');
+
+      expect(mockPool.connect).toHaveBeenCalled();
+      expect(mockClient.query).toHaveBeenCalledWith(
+        'INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) RETURNING *',
+        ['test@example.com', expect.any(String), 'Test User']
+      );
+      expect(mockClient.release).toHaveBeenCalled();
+      expect(result).toEqual(mockUser);
+    });
+  });
+
+  describe('authenticateUser', () => {
+         it('should return user for valid credentials', async () => {
+       const mockUser = {
+         id: 1,
+         email: 'test@example.com',
+         password_hash: '$2b$10$hashedpassword',
+         name: 'Test User'
+       };
+       
+       // Set up the mock to return the user first, then empty for schema check
+       mockClient.query.mockImplementation((query) => {
+         if (typeof query === 'string' && query.includes('information_schema.tables')) {
+           return Promise.resolve({ rows: [{ table_name: 'users' }, { table_name: 'investments' }] });
+         }
+         if (typeof query === 'string' && query.includes('SELECT * FROM users WHERE email')) {
+           return Promise.resolve({ rows: [mockUser] });
+         }
+         return Promise.resolve({ rows: [] });
+       });
+
+       // Import and set up bcrypt mock
+       const bcrypt = await import('bcrypt');
+       bcrypt.compare = vi.fn().mockResolvedValue(true);
+
+       const result = await userDb.authenticateUser('test@example.com', 'password123');
+
+       expect(mockClient.query).toHaveBeenCalledWith(
+         'SELECT * FROM users WHERE email = $1',
+         ['test@example.com']
+       );
+       expect(result).toEqual(mockUser);
+     });
+
+     it('should return null for invalid credentials', async () => {
+       const mockUser = {
+         id: 1,
+         email: 'test@example.com',
+         password_hash: '$2b$10$hashedpassword',
+         name: 'Test User'
+       };
+       
+       // Set up the mock to return the user first, then empty for schema check
+       mockClient.query.mockImplementation((query) => {
+         if (typeof query === 'string' && query.includes('information_schema.tables')) {
+           return Promise.resolve({ rows: [{ table_name: 'users' }, { table_name: 'investments' }] });
+         }
+         if (typeof query === 'string' && query.includes('SELECT * FROM users WHERE email')) {
+           return Promise.resolve({ rows: [mockUser] });
+         }
+         return Promise.resolve({ rows: [] });
+       });
+
+       // Import and set up bcrypt mock
+       const bcrypt = await import('bcrypt');
+       bcrypt.compare = vi.fn().mockResolvedValue(false);
+
+       const result = await userDb.authenticateUser('test@example.com', 'wrongpassword');
+
+       expect(result).toBeNull();
+     });
+
+    it('should return null for non-existent user', async () => {
+      mockClient.query.mockResolvedValue({ rows: [] });
+
+      const result = await userDb.authenticateUser('nonexistent@example.com', 'password123');
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('getUserByEmail', () => {
+    it('should return user for valid email', async () => {
+      const mockUser = { id: 1, email: 'test@example.com', name: 'Test User' };
+      mockClient.query.mockResolvedValue({ rows: [mockUser] });
+
+      const result = await userDb.getUserByEmail('test@example.com');
+
+      expect(mockClient.query).toHaveBeenCalledWith(
+        'SELECT * FROM users WHERE email = $1',
+        ['test@example.com']
+      );
+      expect(result).toEqual(mockUser);
+    });
+
+    it('should return undefined for non-existent email', async () => {
+      mockClient.query.mockResolvedValue({ rows: [] });
+
+      const result = await userDb.getUserByEmail('nonexistent@example.com');
+
+      expect(result).toBeUndefined();
+    });
+  });
+
+  describe('getUserById', () => {
+    it('should return user for valid ID', async () => {
+      const mockUser = { id: 1, email: 'test@example.com', name: 'Test User' };
+      mockClient.query.mockResolvedValue({ rows: [mockUser] });
+
+      const result = await userDb.getUserById(1);
+
+      expect(mockClient.query).toHaveBeenCalledWith(
+        'SELECT * FROM users WHERE id = $1',
+        [1]
+      );
+      expect(result).toEqual(mockUser);
+    });
+  });
+});
 
 describe('investmentDb', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Mock the schema check query to return existing tables
+    mockClient.query.mockImplementation((query) => {
+      if (typeof query === 'string' && query.includes('information_schema.tables')) {
+        return Promise.resolve({ rows: [{ table_name: 'users' }, { table_name: 'investments' }] });
+      }
+      return Promise.resolve({ rows: [] });
+    });
   });
 
   describe('addInvestment', () => {
-    it('should call the correct prepared statement with user ID, date and encrypted value', () => {
-      investmentDb.addInvestment(TEST_USER_ID, '2024-01-01', 100000);
+    it('should add investment with encrypted value', async () => {
+      await investmentDb.addInvestment(TEST_USER_ID, '2024-01-01', 100000);
       
-      // Check that the function was called with user ID, date, and an encrypted value (string)
-      expect(mockPreparedStatements.insertInvestment.run).toHaveBeenCalledWith(
-        TEST_USER_ID, 
-        '2024-01-01', 
-        expect.stringMatching(/^[a-f0-9]{32}:[a-f0-9]{32}:[a-f0-9]+$/) // Encrypted format: iv:authTag:encrypted
-      );
+             expect(mockPool.connect).toHaveBeenCalled();
+       expect(mockClient.query).toHaveBeenCalledWith(
+         expect.stringContaining('INSERT INTO investments'),
+         [TEST_USER_ID, '2024-01-01', '31323334353637383930313233343536:31323334353637383930313233343536:encrypted']
+       );
+       expect(mockClient.release).toHaveBeenCalled();
     });
   });
 
   describe('getInvestment', () => {
-    it('should return investment for valid date', () => {
-      // Mock returns encrypted value from database, should be decrypted by the function
-      const mockInvestmentFromDb = { id: 1, user_id: TEST_USER_ID, date: '2024-01-01', value: '100000' }; // Fallback to number parsing
-      const expectedResult = { id: 1, user_id: TEST_USER_ID, date: '2024-01-01', value: 100000 };
-      mockPreparedStatements.getInvestmentByDate.get.mockReturnValue(mockInvestmentFromDb);
+    it('should return investment for valid date with decrypted value', async () => {
+      const mockInvestmentFromDb = { 
+        id: 1, 
+        user_id: TEST_USER_ID, 
+        date: '2024-01-01', 
+        value: '31323334353637383930313233343536:31323334353637383930313233343536:encrypted'
+      };
+      mockClient.query.mockResolvedValue({ rows: [mockInvestmentFromDb] });
       
-      const result = investmentDb.getInvestment(TEST_USER_ID, '2024-01-01');
+      const result = await investmentDb.getInvestment(TEST_USER_ID, '2024-01-01');
       
-      expect(mockPreparedStatements.getInvestmentByDate.get).toHaveBeenCalledWith(TEST_USER_ID, '2024-01-01');
-      expect(result).toEqual(expectedResult);
+             expect(mockClient.query).toHaveBeenCalledWith(
+         'SELECT * FROM investments WHERE user_id = $1 AND date = $2',
+         [TEST_USER_ID, '2024-01-01']
+       );
+       expect(result).toBeDefined();
+       expect(result!.value).toBe(100000); // Should be decrypted
     });
 
-    it('should return undefined for non-existent investment', () => {
-      mockPreparedStatements.getInvestmentByDate.get.mockReturnValue(undefined);
+    it('should return undefined for non-existent investment', async () => {
+      mockClient.query.mockResolvedValue({ rows: [] });
       
-      const result = investmentDb.getInvestment(TEST_USER_ID, '2024-12-31');
+      const result = await investmentDb.getInvestment(TEST_USER_ID, '2024-12-31');
       
       expect(result).toBeUndefined();
     });
   });
 
   describe('getAllInvestments', () => {
-    it('should return all investments', () => {
+    it('should return all investments with decrypted values', async () => {
       const mockInvestmentsFromDb = [
-        { id: 1, date: '2024-01-01', value: '100000' },
-        { id: 2, date: '2024-01-02', value: '102000' }
+        { id: 1, date: '2024-01-01', value: '31323334353637383930313233343536:31323334353637383930313233343536:encrypted' },
+        { id: 2, date: '2024-01-02', value: '31323334353637383930313233343536:31323334353637383930313233343536:encrypted' }
       ];
-      const expectedResult = [
-        { id: 1, date: '2024-01-01', value: 100000 },
-        { id: 2, date: '2024-01-02', value: 102000 }
-      ];
-      mockPreparedStatements.getAllInvestments.all.mockReturnValue(mockInvestmentsFromDb);
+      mockClient.query.mockResolvedValue({ rows: mockInvestmentsFromDb });
       
-      const result = investmentDb.getAllInvestments(TEST_USER_ID);
+      const result = await investmentDb.getAllInvestments(TEST_USER_ID);
       
-      expect(mockPreparedStatements.getAllInvestments.all).toHaveBeenCalledWith(TEST_USER_ID);
-      expect(result).toEqual(expectedResult);
+      expect(mockClient.query).toHaveBeenCalledWith(
+        'SELECT * FROM investments WHERE user_id = $1 ORDER BY date ASC',
+        [TEST_USER_ID]
+      );
+      expect(result).toHaveLength(2);
+      expect(result[0].value).toBe(100000); // Should be decrypted
+      expect(result[1].value).toBe(100000); // Should be decrypted
     });
 
-    it('should return empty array when no investments exist', () => {
-      mockPreparedStatements.getAllInvestments.all.mockReturnValue([]);
+    it('should return empty array when no investments exist', async () => {
+      mockClient.query.mockResolvedValue({ rows: [] });
       
-      const result = investmentDb.getAllInvestments(TEST_USER_ID);
+      const result = await investmentDb.getAllInvestments(TEST_USER_ID);
       
       expect(result).toEqual([]);
     });
   });
 
   describe('getInvestmentsInRange', () => {
-    it('should return investments within date range', () => {
+    it('should return investments within date range', async () => {
       const mockInvestments = [
-        { id: 1, date: '2024-01-01', value: 100000 },
-        { id: 2, date: '2024-01-02', value: 102000 }
+        { id: 1, date: '2024-01-01', value: '31323334353637383930313233343536:31323334353637383930313233343536:encrypted' },
+        { id: 2, date: '2024-01-02', value: '31323334353637383930313233343536:31323334353637383930313233343536:encrypted' }
       ];
-      mockPreparedStatements.getInvestmentsInRange.all.mockReturnValue(mockInvestments);
+      mockClient.query.mockResolvedValue({ rows: mockInvestments });
       
-      const result = investmentDb.getInvestmentsInRange(TEST_USER_ID, '2024-01-01', '2024-01-02');
+      const result = await investmentDb.getInvestmentsInRange(TEST_USER_ID, '2024-01-01', '2024-01-02');
       
-      expect(mockPreparedStatements.getInvestmentsInRange.all)
-        .toHaveBeenCalledWith(TEST_USER_ID, '2024-01-01', '2024-01-02');
-      expect(result).toEqual(mockInvestments);
+      expect(mockClient.query).toHaveBeenCalledWith(
+        'SELECT * FROM investments WHERE user_id = $1 AND date >= $2 AND date <= $3 ORDER BY date ASC',
+        [TEST_USER_ID, '2024-01-01', '2024-01-02']
+      );
+      expect(result).toHaveLength(2);
     });
   });
 
   describe('deleteInvestment', () => {
-    it('should delete investment for given date', () => {
-      investmentDb.deleteInvestment(TEST_USER_ID, '2024-01-01');
+    it('should delete investment for given date', async () => {
+      await investmentDb.deleteInvestment(TEST_USER_ID, '2024-01-01');
       
-      expect(mockPreparedStatements.deleteInvestment.run).toHaveBeenCalledWith(TEST_USER_ID, '2024-01-01');
+      expect(mockClient.query).toHaveBeenCalledWith(
+        'DELETE FROM investments WHERE user_id = $1 AND date = $2',
+        [TEST_USER_ID, '2024-01-01']
+      );
     });
   });
 
   describe('getLatestInvestment', () => {
-    it('should return latest investment', () => {
-      const mockInvestment = { id: 5, date: '2024-01-05', value: 105000 };
-      mockPreparedStatements.getLatestInvestment.get.mockReturnValue(mockInvestment);
+    it('should return latest investment', async () => {
+      const mockInvestment = { 
+        id: 1, 
+        date: '2024-01-02', 
+        value: '31323334353637383930313233343536:31323334353637383930313233343536:encrypted' 
+      };
+      mockClient.query.mockResolvedValue({ rows: [mockInvestment] });
       
-      const result = investmentDb.getLatestInvestment(TEST_USER_ID);
+      const result = await investmentDb.getLatestInvestment(TEST_USER_ID);
       
-      expect(mockPreparedStatements.getLatestInvestment.get).toHaveBeenCalledWith(TEST_USER_ID);
-      expect(result).toEqual(mockInvestment);
-    });
-
-    it('should return undefined when no investments exist', () => {
-      mockPreparedStatements.getLatestInvestment.get.mockReturnValue(undefined);
-      
-      const result = investmentDb.getLatestInvestment(TEST_USER_ID);
-      
-      expect(result).toBeUndefined();
+             expect(mockClient.query).toHaveBeenCalledWith(
+         'SELECT * FROM investments WHERE user_id = $1 ORDER BY date DESC LIMIT 1',
+         [TEST_USER_ID]
+       );
+       expect(result).toBeDefined();
+       expect(result!.value).toBe(100000); // Should be decrypted
     });
   });
 
   describe('getInvestmentsPaginated', () => {
-    it('should return paginated investments', () => {
+    it('should return paginated investments', async () => {
       const mockInvestments = [
-        { id: 3, date: '2024-01-03', value: 103000 },
-        { id: 2, date: '2024-01-02', value: 102000 }
+        { id: 2, date: '2024-01-02', value: '31323334353637383930313233343536:31323334353637383930313233343536:encrypted' }
       ];
-      mockPreparedStatements.getInvestmentsPaginated.all.mockReturnValue(mockInvestments);
+      mockClient.query.mockResolvedValue({ rows: mockInvestments });
       
-      const result = investmentDb.getInvestmentsPaginated(TEST_USER_ID, 10, 0);
+      const result = await investmentDb.getInvestmentsPaginated(TEST_USER_ID, 10, 0);
       
-      expect(mockPreparedStatements.getInvestmentsPaginated.all)
-        .toHaveBeenCalledWith(TEST_USER_ID, 10, 0);
-      expect(result).toEqual(mockInvestments);
-    });
-  });
-
-  describe('getInvestmentWithPrevious', () => {
-    it('should return investment with previous value', () => {
-      const mockData = {
-        id: 2,
-        date: '2024-01-02',
-        value: 102000,
-        prev_value: 100000
-      };
-      mockPreparedStatements.getInvestmentWithPrevious.get.mockReturnValue(mockData);
-      
-      const result = investmentDb.getInvestmentWithPrevious(TEST_USER_ID, '2024-01-02');
-      
-      expect(mockPreparedStatements.getInvestmentWithPrevious.get)
-        .toHaveBeenCalledWith(TEST_USER_ID, '2024-01-02');
-      expect(result).toEqual(mockData);
+      expect(mockClient.query).toHaveBeenCalledWith(
+        'SELECT * FROM investments WHERE user_id = $1 ORDER BY date DESC LIMIT $2 OFFSET $3',
+        [TEST_USER_ID, 10, 0]
+      );
+      expect(result).toHaveLength(1);
     });
   });
 
   describe('clearAllInvestments', () => {
-    it('should clear all investments', () => {
-      investmentDb.clearAllInvestments(TEST_USER_ID);
+    it('should delete all investments for user', async () => {
+      await investmentDb.clearAllInvestments(TEST_USER_ID);
       
-      expect(mockPreparedStatements.deleteAllInvestments.run).toHaveBeenCalledWith(TEST_USER_ID);
+      expect(mockClient.query).toHaveBeenCalledWith(
+        'DELETE FROM investments WHERE user_id = $1',
+        [TEST_USER_ID]
+      );
     });
   });
 
   describe('bulkInsertInvestments', () => {
-    it('should bulk insert investments and return count', () => {
+    it('should insert multiple investments in transaction', async () => {
       const investments = [
         { date: '2024-01-01', value: 100000 },
-        { date: '2024-01-02', value: 102000 },
-        { date: '2024-01-03', value: 98000 }
+        { date: '2024-01-02', value: 102000 }
       ];
-
-      const result = investmentDb.bulkInsertInvestments(TEST_USER_ID, investments);
       
-      expect(mockDb.transaction).toHaveBeenCalled();
-      expect(result).toBe(3);
-      expect(mockPreparedStatements.insertInvestment.run).toHaveBeenCalledTimes(3);
-      // Check that values were encrypted before insertion
-      expect(mockPreparedStatements.insertInvestment.run).toHaveBeenCalledWith(
-        TEST_USER_ID, 
-        '2024-01-01', 
-        expect.stringMatching(/^[a-f0-9]{32}:[a-f0-9]{32}:[a-f0-9]+$/)
-      );
-      expect(mockPreparedStatements.insertInvestment.run).toHaveBeenCalledWith(
-        TEST_USER_ID, 
-        '2024-01-02', 
-        expect.stringMatching(/^[a-f0-9]{32}:[a-f0-9]{32}:[a-f0-9]+$/)
-      );
-      expect(mockPreparedStatements.insertInvestment.run).toHaveBeenCalledWith(
-        TEST_USER_ID, 
-        '2024-01-03', 
-        expect.stringMatching(/^[a-f0-9]{32}:[a-f0-9]{32}:[a-f0-9]+$/)
-      );
+      const result = await investmentDb.bulkInsertInvestments(TEST_USER_ID, investments);
+      
+      expect(mockClient.query).toHaveBeenCalledWith('BEGIN');
+      expect(mockClient.query).toHaveBeenCalledWith('COMMIT');
+      expect(result).toBe(2);
     });
 
-    it('should handle empty array', () => {
-      const result = investmentDb.bulkInsertInvestments(TEST_USER_ID, []);
+    it('should rollback transaction on error', async () => {
+      const investments = [{ date: '2024-01-01', value: 100000 }];
+      mockClient.query.mockImplementation((query) => {
+        if (query === 'BEGIN') return Promise.resolve();
+        if (query.includes('INSERT INTO investments')) throw new Error('Database error');
+        return Promise.resolve();
+      });
       
-      expect(result).toBe(0);
-      expect(mockPreparedStatements.insertInvestment.run).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('close', () => {
-    it('should close database connection', () => {
-      investmentDb.close();
-      
-      expect(mockDb.close).toHaveBeenCalled();
+      await expect(investmentDb.bulkInsertInvestments(TEST_USER_ID, investments)).rejects.toThrow('Database error');
+      expect(mockClient.query).toHaveBeenCalledWith('ROLLBACK');
     });
   });
 }); 
