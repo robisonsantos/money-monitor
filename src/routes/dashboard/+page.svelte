@@ -85,7 +85,7 @@
       <p class="text-gray-600 mt-1">Track your portfolio performance over time</p>
     </div>
     
-    {#if investments.length > 0}
+    {#if displayInvestments.length > 0}
       <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
         <!-- Filter Controls -->
         <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
@@ -135,7 +135,7 @@
       <h2 class="text-xl font-semibold text-gray-900 mb-2">Loading your investments...</h2>
       <p class="text-gray-600">Please wait while we fetch your data.</p>
     </div>
-  {:else if investments.length === 0 && (!data.recentEntries || data.recentEntries.length === 0)}
+  {:else if displayInvestments.length === 0}
     <!-- Empty State -->
     <div class="text-center py-12">
       <BarChart3 class="w-16 h-16 text-gray-400 mx-auto mb-4" />
