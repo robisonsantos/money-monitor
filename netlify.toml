@@ -1,5 +1,5 @@
 [build]
-  command = "npm install && npx svelte-kit sync && npm run build"
+  command = "echo '=== STARTING BUILD DEBUG ===' && echo 'Node version:' && node --version && echo 'NPM version:' && npm --version && echo 'Current directory:' && pwd && echo 'Directory contents:' && ls -la && echo '=== STEP 1: NPM INSTALL ===' && npm install || { echo '=== NPM INSTALL FAILED ===' && echo 'NPM Debug Logs:' && cat /opt/buildhome/.npm/_logs/* 2>/dev/null || echo 'No npm logs found' && echo 'NPM Cache:' && npm config get cache && echo 'NPM Registry:' && npm config get registry && false; } && echo '=== STEP 2: SVELTE-KIT SYNC ===' && npx svelte-kit sync || { echo '=== SVELTE-KIT SYNC FAILED ===' && echo 'Node modules contents:' && ls -la node_modules/ 2>/dev/null || echo 'No node_modules found' && false; } && echo '=== STEP 3: NPM RUN BUILD ===' && npm run build || { echo '=== NPM RUN BUILD FAILED ===' && echo 'Build logs and final state' && false; }"
   publish = "build"
   
 [build.environment]
