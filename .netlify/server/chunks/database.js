@@ -5,18 +5,24 @@ import crypto from "crypto";
 const dev = BROWSER;
 const { Pool } = pg;
 const ENCRYPTION_ALGORITHM = "aes-256-gcm";
-let ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || "";
-if (!ENCRYPTION_KEY) {
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("ENCRYPTION_KEY environment variable is required in production");
+let ENCRYPTION_KEY = null;
+function getEncryptionKey() {
+  if (ENCRYPTION_KEY === null) {
+    ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || "";
+    if (!ENCRYPTION_KEY) {
+      if (process.env.NODE_ENV === "production") {
+        throw new Error("ENCRYPTION_KEY environment variable is required in production");
+      }
+      ENCRYPTION_KEY = "your-32-byte-secret-key-here-for-dev!";
+      console.warn("⚠️  Using default encryption key for development. Set ENCRYPTION_KEY environment variable.");
+    }
   }
-  ENCRYPTION_KEY = "your-32-byte-secret-key-here-for-dev!";
-  console.warn("⚠️  Using default encryption key for development. Set ENCRYPTION_KEY environment variable.");
+  return ENCRYPTION_KEY;
 }
 let cachedKey = null;
 function getDerivedKey() {
   if (!cachedKey) {
-    cachedKey = crypto.scryptSync(ENCRYPTION_KEY, "salt", 32);
+    cachedKey = crypto.scryptSync(getEncryptionKey(), "salt", 32);
   }
   return cachedKey;
 }
