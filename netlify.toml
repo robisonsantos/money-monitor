@@ -1,5 +1,5 @@
 [build]
-  command = "npm install && npx svelte-kit sync && echo '=== STARTING BUILD ===' && npm run build || { echo '=== BUILD FAILED - DETAILED ERROR ===' && echo 'Package.json scripts:' && cat package.json | grep -A 10 '\"scripts\"' && echo 'Vite config:' && cat vite.config.ts && echo 'SvelteKit config:' && cat svelte.config.js && echo 'Node modules @sveltejs contents:' && ls -la node_modules/@sveltejs/ 2>/dev/null && echo 'Generated .svelte-kit:' && ls -la .svelte-kit/ 2>/dev/null && echo 'Final npm logs:' && cat /opt/buildhome/.npm/_logs/* 2>/dev/null | tail -50 && false; }"
+  command = "npm ci --prefer-offline --no-audit --no-fund && npx svelte-kit sync && npm run build"
   publish = "build"
   
 [build.environment]
