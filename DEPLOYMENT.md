@@ -1,7 +1,5 @@
 # Deployment Guide
 
-<!-- Test commit to verify pre-push hook with commit amend -->
-
 ## Overview
 
 This project uses Block's internal artifactory for local development but requires public npm registry URLs for deployment to external platforms.
