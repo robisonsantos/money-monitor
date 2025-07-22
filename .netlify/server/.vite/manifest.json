@@ -1,0 +1,293 @@
+{
+  ".svelte-kit/generated/server/internal.js": {
+    "file": "internal.js",
+    "name": "internal",
+    "src": ".svelte-kit/generated/server/internal.js",
+    "isEntry": true,
+    "imports": [
+      "_internal.js"
+    ]
+  },
+  "_Icon.js": {
+    "file": "chunks/Icon.js",
+    "name": "Icon",
+    "imports": [
+      "_index2.js"
+    ]
+  },
+  "_database.js": {
+    "file": "chunks/database.js",
+    "name": "database",
+    "imports": [
+      "_false.js"
+    ]
+  },
+  "_equality.js": {
+    "file": "chunks/equality.js",
+    "name": "equality"
+  },
+  "_exports.js": {
+    "file": "chunks/exports.js",
+    "name": "exports"
+  },
+  "_false.js": {
+    "file": "chunks/false.js",
+    "name": "false"
+  },
+  "_index.js": {
+    "file": "chunks/index.js",
+    "name": "index",
+    "imports": [
+      "_index2.js",
+      "_equality.js"
+    ]
+  },
+  "_index2.js": {
+    "file": "chunks/index2.js",
+    "name": "index",
+    "imports": [
+      "_false.js"
+    ]
+  },
+  "_internal.js": {
+    "file": "chunks/internal.js",
+    "name": "internal",
+    "imports": [
+      "_index2.js",
+      "_false.js",
+      "_equality.js"
+    ],
+    "dynamicImports": [
+      "src/hooks.server.ts"
+    ]
+  },
+  "_plus.js": {
+    "file": "chunks/plus.js",
+    "name": "plus",
+    "imports": [
+      "_index2.js",
+      "_Icon.js"
+    ]
+  },
+  "_rateLimit.js": {
+    "file": "chunks/rateLimit.js",
+    "name": "rateLimit"
+  },
+  "_sanitize.js": {
+    "file": "chunks/sanitize.js",
+    "name": "sanitize"
+  },
+  "_state.svelte.js": {
+    "file": "chunks/state.svelte.js",
+    "name": "state.svelte",
+    "imports": [
+      "_index2.js"
+    ]
+  },
+  "_trending-up.js": {
+    "file": "chunks/trending-up.js",
+    "name": "trending-up",
+    "imports": [
+      "_index2.js",
+      "_Icon.js"
+    ]
+  },
+  "_utils.js": {
+    "file": "chunks/utils.js",
+    "name": "utils",
+    "imports": [
+      "_sanitize.js"
+    ]
+  },
+  "node_modules/@sveltejs/kit/src/runtime/components/svelte-5/error.svelte": {
+    "file": "entries/fallbacks/error.svelte.js",
+    "name": "entries/fallbacks/error.svelte",
+    "src": "node_modules/@sveltejs/kit/src/runtime/components/svelte-5/error.svelte",
+    "isEntry": true,
+    "imports": [
+      "_index2.js",
+      "_state.svelte.js",
+      "_exports.js",
+      "_index.js"
+    ]
+  },
+  "node_modules/@sveltejs/kit/src/runtime/server/index.js": {
+    "file": "index.js",
+    "name": "index",
+    "src": "node_modules/@sveltejs/kit/src/runtime/server/index.js",
+    "isEntry": true,
+    "imports": [
+      "_false.js",
+      "_internal.js",
+      "_exports.js",
+      "_index.js"
+    ]
+  },
+  "src/hooks.server.ts": {
+    "file": "chunks/hooks.server.js",
+    "name": "hooks.server",
+    "src": "src/hooks.server.ts",
+    "isDynamicEntry": true,
+    "imports": [
+      "_database.js"
+    ]
+  },
+  "src/routes/+layout.svelte": {
+    "file": "entries/pages/_layout.svelte.js",
+    "name": "entries/pages/_layout.svelte",
+    "src": "src/routes/+layout.svelte",
+    "isEntry": true,
+    "imports": [
+      "_index2.js"
+    ],
+    "css": [
+      "_app/immutable/assets/_layout.9NuDThv5.css"
+    ]
+  },
+  "src/routes/+page.server.ts": {
+    "file": "entries/pages/_page.server.ts.js",
+    "name": "entries/pages/_page.server.ts",
+    "src": "src/routes/+page.server.ts",
+    "isEntry": true
+  },
+  "src/routes/+page.svelte": {
+    "file": "entries/pages/_page.svelte.js",
+    "name": "entries/pages/_page.svelte",
+    "src": "src/routes/+page.svelte",
+    "isEntry": true,
+    "imports": [
+      "_index2.js",
+      "_exports.js",
+      "_state.svelte.js",
+      "_trending-up.js",
+      "_Icon.js"
+    ]
+  },
+  "src/routes/api/auth/signin/+server.ts": {
+    "file": "entries/endpoints/api/auth/signin/_server.ts.js",
+    "name": "entries/endpoints/api/auth/signin/_server.ts",
+    "src": "src/routes/api/auth/signin/+server.ts",
+    "isEntry": true,
+    "imports": [
+      "_database.js",
+      "_rateLimit.js",
+      "_sanitize.js"
+    ]
+  },
+  "src/routes/api/auth/signout/+server.ts": {
+    "file": "entries/endpoints/api/auth/signout/_server.ts.js",
+    "name": "entries/endpoints/api/auth/signout/_server.ts",
+    "src": "src/routes/api/auth/signout/+server.ts",
+    "isEntry": true,
+    "imports": [
+      "_database.js"
+    ]
+  },
+  "src/routes/api/auth/signup/+server.ts": {
+    "file": "entries/endpoints/api/auth/signup/_server.ts.js",
+    "name": "entries/endpoints/api/auth/signup/_server.ts",
+    "src": "src/routes/api/auth/signup/+server.ts",
+    "isEntry": true,
+    "imports": [
+      "_database.js",
+      "_rateLimit.js",
+      "_sanitize.js"
+    ]
+  },
+  "src/routes/api/investments/+server.ts": {
+    "file": "entries/endpoints/api/investments/_server.ts.js",
+    "name": "entries/endpoints/api/investments/_server.ts",
+    "src": "src/routes/api/investments/+server.ts",
+    "isEntry": true,
+    "imports": [
+      "_database.js"
+    ]
+  },
+  "src/routes/api/investments/[date]/+server.ts": {
+    "file": "entries/endpoints/api/investments/_date_/_server.ts.js",
+    "name": "entries/endpoints/api/investments/_date_/_server.ts",
+    "src": "src/routes/api/investments/[date]/+server.ts",
+    "isEntry": true,
+    "imports": [
+      "_database.js"
+    ]
+  },
+  "src/routes/api/investments/export/+server.ts": {
+    "file": "entries/endpoints/api/investments/export/_server.ts.js",
+    "name": "entries/endpoints/api/investments/export/_server.ts",
+    "src": "src/routes/api/investments/export/+server.ts",
+    "isEntry": true,
+    "imports": [
+      "_database.js",
+      "_utils.js"
+    ]
+  },
+  "src/routes/api/investments/import/+server.ts": {
+    "file": "entries/endpoints/api/investments/import/_server.ts.js",
+    "name": "entries/endpoints/api/investments/import/_server.ts",
+    "src": "src/routes/api/investments/import/+server.ts",
+    "isEntry": true,
+    "imports": [
+      "_database.js",
+      "_utils.js"
+    ]
+  },
+  "src/routes/api/investments/recent/+server.ts": {
+    "file": "entries/endpoints/api/investments/recent/_server.ts.js",
+    "name": "entries/endpoints/api/investments/recent/_server.ts",
+    "src": "src/routes/api/investments/recent/+server.ts",
+    "isEntry": true,
+    "imports": [
+      "_database.js"
+    ]
+  },
+  "src/routes/dashboard/+layout.server.ts": {
+    "file": "entries/pages/dashboard/_layout.server.ts.js",
+    "name": "entries/pages/dashboard/_layout.server.ts",
+    "src": "src/routes/dashboard/+layout.server.ts",
+    "isEntry": true
+  },
+  "src/routes/dashboard/+layout.svelte": {
+    "file": "entries/pages/dashboard/_layout.svelte.js",
+    "name": "entries/pages/dashboard/_layout.svelte",
+    "src": "src/routes/dashboard/+layout.svelte",
+    "isEntry": true,
+    "imports": [
+      "_index2.js",
+      "_exports.js",
+      "_state.svelte.js",
+      "_trending-up.js",
+      "_plus.js",
+      "_Icon.js"
+    ]
+  },
+  "src/routes/dashboard/+page.server.ts": {
+    "file": "entries/pages/dashboard/_page.server.ts.js",
+    "name": "entries/pages/dashboard/_page.server.ts",
+    "src": "src/routes/dashboard/+page.server.ts",
+    "isEntry": true
+  },
+  "src/routes/dashboard/+page.svelte": {
+    "file": "entries/pages/dashboard/_page.svelte.js",
+    "name": "entries/pages/dashboard/_page.svelte",
+    "src": "src/routes/dashboard/+page.svelte",
+    "isEntry": true,
+    "imports": [
+      "_index2.js",
+      "_utils.js"
+    ]
+  },
+  "src/routes/dashboard/add/+page.svelte": {
+    "file": "entries/pages/dashboard/add/_page.svelte.js",
+    "name": "entries/pages/dashboard/add/_page.svelte",
+    "src": "src/routes/dashboard/add/+page.svelte",
+    "isEntry": true,
+    "imports": [
+      "_index2.js",
+      "_exports.js",
+      "_state.svelte.js",
+      "_plus.js",
+      "_Icon.js"
+    ]
+  }
+}
