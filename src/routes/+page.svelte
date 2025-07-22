@@ -1,5 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
+  import { dev } from '$app/environment';
   import { TrendingUp, BarChart3, DollarSign, Shield, Upload, Calendar } from 'lucide-svelte';
 
   let isSignUp = $state(false);
@@ -344,12 +345,14 @@
             </button>
           </div>
 
-          <!-- Demo Credentials -->
-          <div class="mt-6 p-4 bg-gray-50 rounded-lg">
-            <h4 class="font-medium text-gray-900 mb-2">Demo Account (Dev Mode)</h4>
-            <p class="text-sm text-gray-600 mb-2">Email: admin@moneymonitor.com</p>
-            <p class="text-sm text-gray-600">Password: 123456</p>
-          </div>
+          <!-- Demo Credentials (Development Only) -->
+          {#if dev}
+            <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+              <h4 class="font-medium text-gray-900 mb-2">Demo Account (Dev Mode)</h4>
+              <p class="text-sm text-gray-600 mb-2">Email: admin@moneymonitor.com</p>
+              <p class="text-sm text-gray-600">Password: 123456</p>
+            </div>
+          {/if}
         </div>
       </div>
     </div>
