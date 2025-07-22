@@ -4,6 +4,12 @@
 
 This project uses Block's internal artifactory for local development but requires public npm registry URLs for deployment to external platforms.
 
+**Why This Matters:**
+- **Block Artifactory**: Faster, private network access for local development
+- **Public npm Registry**: Required for external platform deployments (Vercel, Railway, etc.)
+- **Automatic Conversion**: Pre-push hook handles the conversion seamlessly
+- **Optional Restoration**: `npm run restore:local` to switch back for faster local installs
+
 ## 🔄 Registry Conversion Workflow
 
 ### Automatic (Recommended)
@@ -26,8 +32,8 @@ npm run prepare:deploy
 # Deploy to your platform
 # (URLs will work on external platforms)
 
-# Optional: Restore local artifactory URLs for development  
-git checkout package-lock.json
+# Restore local artifactory URLs for faster development
+npm run restore:local
 ```
 
 ## 🛡️ Security Features
@@ -105,6 +111,20 @@ npm run prepare:deploy  # Optional - pre-push hook handles this
 - **npm run dev**: Development mode with demo credentials visible
 - **npm run build**: Production build with credentials hidden
 - **git push**: Automatic conversion to public registry URLs
+- **npm run restore:local**: Restore Block artifactory URLs after push (optional)
+
+### Daily Workflow
+
+```bash
+# Normal development cycle
+npm run dev                  # Development with demo credentials
+git add -A
+git commit -m "feature: ..." 
+git push origin main         # 🪄 Hook automatically converts URLs!
+
+# Optional: Restore for faster local npm operations
+npm run restore:local        # 🏠 Back to Block artifactory for speed
+```
 
 ## 🔍 Troubleshooting
 
@@ -132,6 +152,24 @@ node scripts/prepare-deploy.js
 npm config get registry
 
 # Should be: https://artifactory.global.square/artifactory/api/npm/square-npm/
+```
+
+### Slow npm install After Push
+```bash
+# If npm install is slow after pushing, restore local URLs
+npm run restore:local
+
+# Check package-lock.json is using Block artifactory
+grep -c "global.block-artifacts.com" package-lock.json
+```
+
+### Manual Registry Switching
+```bash
+# Convert to public registry (for deployment)
+npm run prepare:deploy
+
+# Restore to Block artifactory (for local development)
+npm run restore:local
 ```
 
 ## 📊 Registry URLs
