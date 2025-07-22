@@ -20,6 +20,7 @@
     "test:integration": "playwright test",
     "test:all": "npm run test && npm run test:integration",
     "prepare:deploy": "node scripts/prepare-deploy.js",
+    "restore:local": "node scripts/restore-local.js",
     "setup:hooks": "chmod +x .git/hooks/pre-push && echo '✅ Git hooks configured'"
   },
   "devDependencies": {
