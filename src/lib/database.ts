@@ -8,22 +8,29 @@ const { Pool } = pg;
 // Encryption configuration
 const ENCRYPTION_ALGORITHM = 'aes-256-gcm';
 
-// Validate encryption key
-let ENCRYPTION_KEY: string = process.env.ENCRYPTION_KEY || '';
-if (!ENCRYPTION_KEY) {
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('ENCRYPTION_KEY environment variable is required in production');
+// Validate encryption key (lazy evaluation to avoid build-time errors)
+let ENCRYPTION_KEY: string | null = null;
+
+function getEncryptionKey(): string {
+  if (ENCRYPTION_KEY === null) {
+    ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || '';
+    if (!ENCRYPTION_KEY) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('ENCRYPTION_KEY environment variable is required in production');
+      }
+      // Use development key only in development
+      ENCRYPTION_KEY = 'your-32-byte-secret-key-here-for-dev!';
+      console.warn('⚠️  Using default encryption key for development. Set ENCRYPTION_KEY environment variable.');
+    }
   }
-  // Use development key only in development
-  ENCRYPTION_KEY = 'your-32-byte-secret-key-here-for-dev!';
-  console.warn('⚠️  Using default encryption key for development. Set ENCRYPTION_KEY environment variable.');
+  return ENCRYPTION_KEY;
 }
 
 // Cache the derived key to avoid expensive scryptSync calls
 let cachedKey: Buffer | null = null;
 function getDerivedKey(): Buffer {
   if (!cachedKey) {
-    cachedKey = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
+    cachedKey = crypto.scryptSync(getEncryptionKey(), 'salt', 32);
   }
   return cachedKey;
 }
