@@ -18,7 +18,8 @@
     "test:coverage": "vitest --coverage",
     "test:ui": "vitest --ui",
     "test:integration": "playwright test",
-    "test:all": "npm run test && npm run test:integration"
+    "test:all": "npm run test && npm run test:integration",
+    "prepare:deploy": "node scripts/prepare-deploy.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.54.1",
