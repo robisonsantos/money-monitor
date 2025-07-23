@@ -1,7 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { dev } from '$app/environment';
-  import { TrendingUp, BarChart3, DollarSign, Shield, Upload, Calendar, Eye, EyeOff } from 'lucide-svelte';
+  import { TrendingUp, BarChart3, DollarSign, Shield, Upload, Calendar, Eye, EyeOff, Check } from 'lucide-svelte';
 
   let isSignUp = $state(false);
   let email = $state('');
@@ -10,6 +10,15 @@
   let loading = $state(false);
   let error = $state('');
   let showPassword = $state(false);
+
+  // Password strength validation (for signup)
+  let passwordRules = $derived({
+    length: password.length >= 12,
+    uppercase: /[A-Z]/.test(password),
+    lowercase: /[a-z]/.test(password),
+    number: /\d/.test(password),
+    special: /[@$!%*?&]/.test(password)
+  });
 
   async function handleAuth() {
     if (!email || !password) {
@@ -323,7 +332,7 @@
                   bind:value={password}
                   required
                   class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="••••••••"
+                  placeholder="••••••••••••"
                 />
                 <button
                   type="button"
@@ -339,6 +348,69 @@
                   {/if}
                 </button>
               </div>
+              
+              <!-- Password Strength Indicator (Signup Only) -->
+              {#if isSignUp}
+                <div class="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <h4 class="text-sm font-medium text-gray-700 mb-3">Password Requirements:</h4>
+                  <div class="space-y-2">
+                    <div class="flex items-center space-x-2">
+                      <div class="flex-shrink-0 w-5 h-5 rounded-full border-2 {passwordRules.length ? 'bg-green-500 border-green-500' : 'border-gray-300'} flex items-center justify-center">
+                        {#if passwordRules.length}
+                          <Check class="w-3 h-3 text-white" />
+                        {/if}
+                      </div>
+                      <span class="text-sm {passwordRules.length ? 'text-green-700' : 'text-gray-600'}">
+                        At least 12 characters
+                      </span>
+                    </div>
+                    
+                    <div class="flex items-center space-x-2">
+                      <div class="flex-shrink-0 w-5 h-5 rounded-full border-2 {passwordRules.uppercase ? 'bg-green-500 border-green-500' : 'border-gray-300'} flex items-center justify-center">
+                        {#if passwordRules.uppercase}
+                          <Check class="w-3 h-3 text-white" />
+                        {/if}
+                      </div>
+                      <span class="text-sm {passwordRules.uppercase ? 'text-green-700' : 'text-gray-600'}">
+                        One uppercase letter (A-Z)
+                      </span>
+                    </div>
+                    
+                    <div class="flex items-center space-x-2">
+                      <div class="flex-shrink-0 w-5 h-5 rounded-full border-2 {passwordRules.lowercase ? 'bg-green-500 border-green-500' : 'border-gray-300'} flex items-center justify-center">
+                        {#if passwordRules.lowercase}
+                          <Check class="w-3 h-3 text-white" />
+                        {/if}
+                      </div>
+                      <span class="text-sm {passwordRules.lowercase ? 'text-green-700' : 'text-gray-600'}">
+                        One lowercase letter (a-z)
+                      </span>
+                    </div>
+                    
+                    <div class="flex items-center space-x-2">
+                      <div class="flex-shrink-0 w-5 h-5 rounded-full border-2 {passwordRules.number ? 'bg-green-500 border-green-500' : 'border-gray-300'} flex items-center justify-center">
+                        {#if passwordRules.number}
+                          <Check class="w-3 h-3 text-white" />
+                        {/if}
+                      </div>
+                      <span class="text-sm {passwordRules.number ? 'text-green-700' : 'text-gray-600'}">
+                        One number (0-9)
+                      </span>
+                    </div>
+                    
+                    <div class="flex items-center space-x-2">
+                      <div class="flex-shrink-0 w-5 h-5 rounded-full border-2 {passwordRules.special ? 'bg-green-500 border-green-500' : 'border-gray-300'} flex items-center justify-center">
+                        {#if passwordRules.special}
+                          <Check class="w-3 h-3 text-white" />
+                        {/if}
+                      </div>
+                      <span class="text-sm {passwordRules.special ? 'text-green-700' : 'text-gray-600'}">
+                        One special character (@$!%*?&)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              {/if}
             </div>
 
             {#if error}
