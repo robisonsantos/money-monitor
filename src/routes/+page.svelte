@@ -1,7 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { dev } from '$app/environment';
-  import { TrendingUp, BarChart3, DollarSign, Shield, Upload, Calendar } from 'lucide-svelte';
+  import { TrendingUp, BarChart3, DollarSign, Shield, Upload, Calendar, Eye, EyeOff } from 'lucide-svelte';
 
   let isSignUp = $state(false);
   let email = $state('');
@@ -9,6 +9,7 @@
   let name = $state('');
   let loading = $state(false);
   let error = $state('');
+  let showPassword = $state(false);
 
   async function handleAuth() {
     if (!email || !password) {
@@ -47,6 +48,10 @@
     isSignUp = !isSignUp;
     error = '';
     name = '';
+  }
+
+  function togglePasswordVisibility() {
+    showPassword = !showPassword;
   }
 </script>
 
@@ -311,14 +316,29 @@
 
             <div>
               <label for="password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
-              <input
-                type="password"
-                id="password"
-                bind:value={password}
-                required
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="••••••••"
-              />
+              <div class="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  id="password"
+                  bind:value={password}
+                  required
+                  class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onclick={togglePasswordVisibility}
+                  class="absolute inset-y-0 right-0 flex items-center justify-center w-12 text-gray-400 hover:text-gray-600 focus:outline-none focus:text-gray-600 transition-colors duration-200"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  title={showPassword ? "Hide password" : "Show password"}
+                >
+                  {#if showPassword}
+                    <EyeOff class="w-5 h-5" />
+                  {:else}
+                    <Eye class="w-5 h-5" />
+                  {/if}
+                </button>
+              </div>
             </div>
 
             {#if error}
