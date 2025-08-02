@@ -1,8 +1,8 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
-  import { Plus, Save, AlertCircle, Edit3 } from 'lucide-svelte';
-  import { format } from 'date-fns';
+  import { Plus, Save, AlertCircle, Edit3, Calendar } from 'lucide-svelte';
+  import { format, getDay, addDays } from 'date-fns';
   import { formatDate } from '$lib/utils';
   import { onMount } from 'svelte';
 
@@ -14,6 +14,27 @@
   let isEditMode = $state(false);
   let originalDate = $state('');
   let dateWarning = $state('');
+  let carryOverWeekend = $state(false);
+  let weekendCarryOverInfo = $state('');
+
+  // Reactive check for Friday
+  const isFriday = $derived(() => {
+    if (!date) return false;
+    const selectedDate = new Date(date + 'T00:00:00');
+    return getDay(selectedDate) === 5; // 5 = Friday
+  });
+
+  // Weekend dates for display
+  const weekendDates = $derived(() => {
+    if (!isFriday()) return { saturday: '', sunday: '' };
+    const fridayDate = new Date(date + 'T00:00:00');
+    const saturday = addDays(fridayDate, 1);
+    const sunday = addDays(fridayDate, 2);
+    return {
+      saturday: format(saturday, 'yyyy-MM-dd'),
+      sunday: format(sunday, 'yyyy-MM-dd')
+    };
+  });
 
   // Reactive check for edit mode based on URL parameters
   $effect(() => {
@@ -110,6 +131,20 @@
         error = `An investment entry already exists for ${formatDate(date)}. Please use the edit functionality to update it, or choose a different date.`;
         return;
       }
+
+      // Check weekend dates if carry-over is enabled
+      if (carryOverWeekend && isFriday()) {
+        const saturdayExists = await checkDateExists(weekendDates().saturday);
+        const sundayExists = await checkDateExists(weekendDates().sunday);
+        
+        if (saturdayExists || sundayExists) {
+          const existingDays = [];
+          if (saturdayExists) existingDays.push('Saturday');
+          if (sundayExists) existingDays.push('Sunday');
+          error = `Cannot carry over to weekend: entries already exist for ${existingDays.join(' and ')}. Please edit those entries individually if needed.`;
+          return;
+        }
+      }
     }
 
     isLoading = true;
@@ -117,15 +152,24 @@
 
     try {
       const method = isEditMode ? 'PUT' : 'POST';
+      
+      // Prepare request body - include weekend carry-over info if applicable
+      const requestBody: any = {
+        date,
+        value: numValue
+      };
+
+      if (!isEditMode && carryOverWeekend && isFriday()) {
+        requestBody.carryOverWeekend = true;
+        requestBody.weekendDates = weekendDates();
+      }
+
       const response = await fetch('/api/investments', {
         method,
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          date,
-          value: numValue
-        })
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
@@ -140,12 +184,22 @@
         return;
       }
 
+      const responseData = await response.json();
       success = true;
+      
+      // Store weekend carry-over info for success message
+      if (responseData.weekendCarryOver) {
+        weekendCarryOverInfo = ` Also saved for ${formatDate(responseData.weekendCarryOver.saturday)} and ${formatDate(responseData.weekendCarryOver.sunday)}.`;
+      } else {
+        weekendCarryOverInfo = '';
+      }
       
       if (!isEditMode) {
         // Reset form only for new entries
         value = '';
         date = format(new Date(), 'yyyy-MM-dd');
+        carryOverWeekend = false;
+        weekendCarryOverInfo = '';
       }
       
       // Show success message briefly then redirect
@@ -220,7 +274,12 @@
                 <p class="text-success-900 font-semibold text-lg">
                   Investment entry {isEditMode ? 'updated' : 'saved'} successfully!
                 </p>
-                <p class="text-success-700 text-sm mt-1">Redirecting to dashboard...</p>
+                <p class="text-success-700 text-sm mt-1">
+                  {#if weekendCarryOverInfo}
+                    {weekendCarryOverInfo}
+                  {/if}
+                  Redirecting to dashboard...
+                </p>
               </div>
             </div>
           </div>
@@ -289,6 +348,39 @@
               Enter the total value of your investment portfolio
             </p>
           </div>
+
+          {#if !isEditMode && isFriday()}
+            <div class="bg-blue-50 border border-blue-200 rounded-xl p-6">
+              <div class="flex items-start">
+                <div class="flex items-center h-5 mr-4 mt-0.5">
+                  <input
+                    id="carryOverWeekend"
+                    type="checkbox"
+                    bind:checked={carryOverWeekend}
+                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    disabled={isLoading}
+                  />
+                </div>
+                <div class="flex-1">
+                  <label for="carryOverWeekend" class="block text-sm font-medium text-blue-900 mb-2 cursor-pointer">
+                    <Calendar class="w-4 h-4 inline mr-2" />
+                    Copy this value to weekend days
+                  </label>
+                  <p class="text-sm text-blue-700 mb-3">
+                    Since markets are closed on weekends, this will also save the same value for:
+                  </p>
+                  <div class="flex flex-col sm:flex-row gap-2 text-sm">
+                    <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-lg font-medium">
+                      📅 Saturday: {formatDate(weekendDates().saturday)}
+                    </span>
+                    <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-lg font-medium">
+                      📅 Sunday: {formatDate(weekendDates().sunday)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          {/if}
 
           <div class="flex flex-col sm:flex-row items-center gap-4 pt-6">
             <button
