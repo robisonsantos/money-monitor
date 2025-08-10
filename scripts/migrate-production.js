@@ -166,27 +166,10 @@ const MIGRATIONS = [
     name: "Complete Money Monitor Schema with Portfolios",
     sql: COMBINED_MIGRATION_SQL,
     checkQuery: `
-      SELECT
-        (SELECT EXISTS (
-          SELECT FROM information_schema.tables
-          WHERE table_schema = 'public' AND table_name = 'users'
-        )) AND
-        (SELECT EXISTS (
-          SELECT FROM information_schema.tables
-          WHERE table_schema = 'public' AND table_name = 'portfolios'
-        )) AND
-        (SELECT EXISTS (
-          SELECT FROM information_schema.tables
-          WHERE table_schema = 'public' AND table_name = 'investments'
-        )) AND
-        (SELECT EXISTS (
-          SELECT FROM information_schema.tables
-          WHERE table_schema = 'public' AND table_name = 'sessions'
-        )) AND
-        (SELECT EXISTS (
-          SELECT FROM information_schema.columns
-          WHERE table_name = 'investments' AND column_name = 'portfolio_id'
-        )) as schema_complete;
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns
+        WHERE table_name = 'investments' AND column_name = 'portfolio_id'
+      ) as exists;
     `,
   },
 ];
@@ -277,16 +260,17 @@ async function verifyMigrationState(pool, migration) {
 
   try {
     const result = await pool.query(migration.checkQuery);
-    // Handle both boolean and nested object responses
-    const verified = result.rows[0]?.exists === true || result.rows[0]?.schema_complete === true;
+    const verified = result.rows[0]?.exists === true;
 
     return {
       verified,
       message: verified
         ? "Migration state verified successfully"
-        : "Migration state verification failed - database may be in inconsistent state",
+        : "Migration state verification failed - portfolio_id column not found",
     };
   } catch (error) {
+    console.log(`⚠️  Verification query failed: ${error.message}`);
+    // If verification fails, assume we need to run the migration
     return {
       verified: false,
       message: `Verification failed: ${error.message}`,
@@ -306,13 +290,17 @@ async function applyMigration(pool, migration) {
       return { success: true, skipped: true };
     }
 
-    // Verify current state
-    const preVerification = await verifyMigrationState(pool, migration);
-    if (preVerification.verified) {
-      console.log(`✅ Migration '${migration.name}' already in correct state, recording as applied`);
-      const dummyChecksum = calculateChecksum("already-applied");
-      await recordMigration(pool, migration, dummyChecksum, true);
-      return { success: true, skipped: true };
+    // Verify current state (but be lenient if verification fails)
+    try {
+      const preVerification = await verifyMigrationState(pool, migration);
+      if (preVerification.verified) {
+        console.log(`✅ Migration '${migration.name}' already in correct state, recording as applied`);
+        const dummyChecksum = calculateChecksum("already-applied");
+        await recordMigration(pool, migration, dummyChecksum, true);
+        return { success: true, skipped: true };
+      }
+    } catch (preVerifyError) {
+      console.log(`⚠️  Pre-verification failed: ${preVerifyError.message}, continuing with migration...`);
     }
 
     // Get migration SQL
@@ -345,11 +333,39 @@ async function applyMigration(pool, migration) {
       await client.query(migrationSQL);
       console.log("⚡ Migration SQL executed");
 
-      // Verify post-migration state
-      const postVerification = await verifyMigrationState(pool, migration);
-      if (!postVerification.verified) {
-        throw new Error(`Post-migration verification failed: ${postVerification.message}`);
+      // Simple validation to ensure key components exist
+      console.log("🔍 Validating migration results...");
+
+      // Check if key tables exist
+      const tablesCheck = await client.query(`
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = 'public'
+        AND table_name IN ('users', 'portfolios', 'investments', 'sessions')
+        ORDER BY table_name
+      `);
+
+      const expectedTables = ["investments", "portfolios", "sessions", "users"];
+      const actualTables = tablesCheck.rows.map((row) => row.table_name);
+
+      for (const table of expectedTables) {
+        if (!actualTables.includes(table)) {
+          throw new Error(`Required table '${table}' was not created`);
+        }
       }
+      console.log(`✅ All required tables exist: ${actualTables.join(", ")}`);
+
+      // Check if portfolio_id column exists
+      const portfolioColumnCheck = await client.query(`
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = 'investments' AND column_name = 'portfolio_id'
+      `);
+
+      if (portfolioColumnCheck.rows.length === 0) {
+        throw new Error(`Critical: portfolio_id column missing from investments table`);
+      }
+      console.log(`✅ portfolio_id column exists in investments table`);
 
       // Record successful migration
       await client.query(
@@ -370,12 +386,19 @@ async function applyMigration(pool, migration) {
       console.log(`🎉 Migration '${migration.name}' applied successfully`);
       return { success: true, skipped: false };
     } catch (error) {
-      await client.query("ROLLBACK");
-      console.log("🔄 Transaction rolled back");
+      console.error(`💥 Migration execution failed: ${error.message}`);
 
-      // Record failed migration
       try {
-        await recordMigration(pool, migration, checksum, false);
+        await client.query("ROLLBACK");
+        console.log("🔄 Transaction rolled back");
+      } catch (rollbackError) {
+        console.error(`⚠️  Rollback failed: ${rollbackError.message}`);
+      }
+
+      // Record failed migration (outside transaction)
+      try {
+        const failedChecksum = calculateChecksum(migrationSQL);
+        await recordMigration(pool, migration, failedChecksum, false);
       } catch (recordError) {
         console.error("⚠️  Failed to record migration failure:", recordError.message);
       }
@@ -386,6 +409,13 @@ async function applyMigration(pool, migration) {
     }
   } catch (error) {
     console.error(`❌ Migration '${migration.name}' failed: ${error.message}`);
+
+    // Additional debugging info
+    if (error.message.includes("portfolio_id")) {
+      console.error("🔍 This appears to be a portfolio_id column issue");
+      console.error("💡 The database may already have the investments table without portfolio support");
+    }
+
     return { success: false, error: error.message, skipped: false };
   }
 }
@@ -423,36 +453,69 @@ async function performHealthCheck(pool) {
     }
 
     // Check data integrity
-    const orphanedInvestments = await pool.query(`
-      SELECT COUNT(*) as count
-      FROM investments
-      WHERE portfolio_id IS NULL
-    `);
+    // Check for orphaned investments (handle case where portfolio_id doesn't exist)
+    try {
+      const orphanedInvestments = await pool.query(`
+        SELECT COUNT(*) as count
+        FROM investments
+        WHERE portfolio_id IS NULL
+      `);
 
-    const orphanedCount = parseInt(orphanedInvestments.rows[0].count);
-    checks.push({
-      name: "No orphaned investments",
-      status: orphanedCount === 0 ? "PASS" : "FAIL",
-      details: orphanedCount > 0 ? `Found ${orphanedCount} orphaned investments` : undefined,
-    });
+      const orphanedCount = parseInt(orphanedInvestments.rows[0].count);
+      checks.push({
+        name: "No orphaned investments",
+        status: orphanedCount === 0 ? "PASS" : "FAIL",
+        details: orphanedCount > 0 ? `Found ${orphanedCount} orphaned investments` : undefined,
+      });
+    } catch (orphanError) {
+      if (orphanError.message.includes("portfolio_id")) {
+        checks.push({
+          name: "No orphaned investments",
+          status: "FAIL",
+          details: "portfolio_id column does not exist",
+        });
+      } else {
+        checks.push({
+          name: "No orphaned investments",
+          status: "FAIL",
+          details: `Query failed: ${orphanError.message}`,
+        });
+      }
+    }
 
-    // Check each user has a default portfolio
-    const usersWithoutPortfolio = await pool.query(`
-      SELECT COUNT(*) as count
-      FROM users u
-      LEFT JOIN portfolios p ON u.id = p.user_id AND p.name = 'Main Portfolio'
-      WHERE p.id IS NULL
-    `);
+    // Check each user has a default portfolio (handle case where portfolios table doesn't exist)
+    try {
+      const usersWithoutPortfolio = await pool.query(`
+        SELECT COUNT(*) as count
+        FROM users u
+        LEFT JOIN portfolios p ON u.id = p.user_id AND p.name = 'Main Portfolio'
+        WHERE p.id IS NULL
+      `);
 
-    const usersWithoutPortfolioCount = parseInt(usersWithoutPortfolio.rows[0].count);
-    checks.push({
-      name: "All users have default portfolio",
-      status: usersWithoutPortfolioCount === 0 ? "PASS" : "FAIL",
-      details:
-        usersWithoutPortfolioCount > 0
-          ? `Found ${usersWithoutPortfolioCount} users without default portfolio`
-          : undefined,
-    });
+      const usersWithoutPortfolioCount = parseInt(usersWithoutPortfolio.rows[0].count);
+      checks.push({
+        name: "All users have default portfolio",
+        status: usersWithoutPortfolioCount === 0 ? "PASS" : "FAIL",
+        details:
+          usersWithoutPortfolioCount > 0
+            ? `Found ${usersWithoutPortfolioCount} users without default portfolio`
+            : undefined,
+      });
+    } catch (portfolioError) {
+      if (portfolioError.message.includes("portfolios")) {
+        checks.push({
+          name: "All users have default portfolio",
+          status: "FAIL",
+          details: "portfolios table does not exist",
+        });
+      } else {
+        checks.push({
+          name: "All users have default portfolio",
+          status: "FAIL",
+          details: `Query failed: ${portfolioError.message}`,
+        });
+      }
+    }
 
     // Summary
     const failedChecks = checks.filter((check) => check.status === "FAIL");
