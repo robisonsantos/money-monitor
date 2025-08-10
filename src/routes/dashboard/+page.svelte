@@ -142,10 +142,14 @@
   }
 
   async function handlePortfolioCreate(event: CustomEvent<{ name: string }>) {
+    console.log("handlePortfolioCreate called with:", event.detail);
     const result = await portfolioStore.createPortfolio(event.detail.name);
+    console.log("Portfolio creation result:", result);
     if (!result) {
       // Error is handled by the store, but we could show a toast here
       console.error("Failed to create portfolio");
+    } else {
+      console.log("Portfolio created successfully:", result);
     }
   }
 
