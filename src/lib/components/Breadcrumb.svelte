@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from "$app/stores";
-  import { ChevronRight, Home, Plus, Folder, AlertCircle } from "lucide-svelte";
+  import { ChevronRight, Home, BarChart3, Plus, Folder, AlertCircle, Edit3 } from "lucide-svelte";
   import type { Portfolio } from "$lib/database";
 
   interface Props {
@@ -8,6 +8,11 @@
   }
 
   let { selectedPortfolio }: Props = $props();
+
+  // Check if we're in edit mode based on URL parameters
+  let isEditMode = $derived(() => {
+    return $page.url.pathname === "/dashboard/add" && $page.url.searchParams.has("edit");
+  });
 </script>
 
 <nav class="flex mb-4 sm:mb-6" aria-label="Breadcrumb">
@@ -67,14 +72,23 @@
       </li>
     {/if}
 
-    <!-- Add Entry page -->
+    <!-- Add/Edit Entry page -->
     {#if $page.url.pathname === "/dashboard/add"}
       <li class="inline-flex items-center">
         <ChevronRight class="w-4 h-4 text-gray-400 mx-1 md:mx-2" />
         <span class="inline-flex items-center space-x-1 font-medium text-gray-500">
-          <Plus class="w-4 h-4" />
+          {#if isEditMode}
+            <Edit3 class="w-4 h-4" />
+          {:else}
+            <Plus class="w-4 h-4" />
+          {/if}
           <div class="flex flex-col">
-            <span>Add Entry</span>
+            <span>{isEditMode ? "Edit Entry" : "Add Entry"}</span>
+            {#if selectedPortfolio}
+              <span class="text-xs text-gray-400 hidden sm:block">
+                {isEditMode ? `in ${selectedPortfolio.name}` : `to ${selectedPortfolio.name}`}
+              </span>
+            {/if}
           </div>
         </span>
       </li>
