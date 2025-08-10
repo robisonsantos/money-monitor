@@ -1,45 +1,67 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
-  import { page } from '$app/stores';
-  import { Plus, Save, AlertCircle, Edit3, Calendar } from 'lucide-svelte';
-  import { format, getDay, addDays } from 'date-fns';
-  import { formatDate } from '$lib/utils';
-  import { onMount } from 'svelte';
+  import { goto } from "$app/navigation";
+  import { page } from "$app/stores";
+  import { Plus, Save, AlertCircle, Edit3, Calendar, Folder } from "lucide-svelte";
+  import { format, getDay, addDays } from "date-fns";
+  import { formatDate } from "$lib/utils";
+  import { onMount } from "svelte";
+  import PortfolioSelector from "$lib/components/PortfolioSelector.svelte";
+  import {
+    portfolioStore,
+    portfolios,
+    selectedPortfolio,
+    portfolioIsLoading,
+    portfolioError,
+  } from "$lib/stores/portfolio";
+  import type { Portfolio } from "$lib/database";
 
-  let date = $state(format(new Date(), 'yyyy-MM-dd'));
-  let value = $state('');
+  let date = $state(format(new Date(), "yyyy-MM-dd"));
+  let value = $state("");
   let isLoading = $state(false);
-  let error = $state('');
+  let error = $state("");
   let success = $state(false);
   let isEditMode = $state(false);
-  let originalDate = $state('');
-  let dateWarning = $state('');
+  let originalDate = $state("");
+  let dateWarning = $state("");
   let carryOverWeekend = $state(false);
-  let weekendCarryOverInfo = $state('');
+  let weekendCarryOverInfo = $state("");
+  let currentPortfolio = $state<Portfolio | null>(null);
 
   // Reactive check for Friday
   const isFriday = $derived(() => {
     if (!date) return false;
-    const selectedDate = new Date(date + 'T00:00:00');
+    const selectedDate = new Date(date + "T00:00:00");
     return getDay(selectedDate) === 5; // 5 = Friday
   });
 
   // Weekend dates for display
   const weekendDates = $derived(() => {
-    if (!isFriday()) return { saturday: '', sunday: '' };
-    const fridayDate = new Date(date + 'T00:00:00');
+    if (!isFriday()) return { saturday: "", sunday: "" };
+    const fridayDate = new Date(date + "T00:00:00");
     const saturday = addDays(fridayDate, 1);
     const sunday = addDays(fridayDate, 2);
     return {
-      saturday: format(saturday, 'yyyy-MM-dd'),
-      sunday: format(sunday, 'yyyy-MM-dd')
+      saturday: format(saturday, "yyyy-MM-dd"),
+      sunday: format(sunday, "yyyy-MM-dd"),
     };
+  });
+
+  // Load portfolios on mount
+  $effect(() => {
+    portfolioStore.loadPortfolios();
+  });
+
+  // Set current portfolio when selected portfolio changes
+  $effect(() => {
+    if ($selectedPortfolio) {
+      currentPortfolio = $selectedPortfolio;
+    }
   });
 
   // Reactive check for edit mode based on URL parameters
   $effect(() => {
-    const editDate = $page.url.searchParams.get('edit');
-    
+    const editDate = $page.url.searchParams.get("edit");
+
     if (editDate && editDate !== originalDate) {
       isEditMode = true;
       originalDate = editDate;
@@ -48,51 +70,53 @@
     } else if (!editDate && isEditMode) {
       // Reset to add mode if no edit parameter
       isEditMode = false;
-      originalDate = '';
-      date = format(new Date(), 'yyyy-MM-dd');
-      value = '';
-      error = '';
+      originalDate = "";
+      date = format(new Date(), "yyyy-MM-dd");
+      value = "";
+      error = "";
     }
   });
 
   // Real-time date validation for new entries
   $effect(() => {
-    if (!isEditMode && date && date !== format(new Date(), 'yyyy-MM-dd')) {
-      checkDateExists(date).then(dateExists => {
-        if (dateExists) {
-          dateWarning = `⚠️ An entry already exists for ${formatDate(date)}`;
-        } else {
-          dateWarning = '';
-        }
-      }).catch(() => {
-        dateWarning = '';
-      });
+    if (!isEditMode && date && date !== format(new Date(), "yyyy-MM-dd")) {
+      checkDateExists(date)
+        .then((dateExists) => {
+          if (dateExists) {
+            dateWarning = `⚠️ An entry already exists for ${formatDate(date)}`;
+          } else {
+            dateWarning = "";
+          }
+        })
+        .catch(() => {
+          dateWarning = "";
+        });
     } else {
-      dateWarning = '';
+      dateWarning = "";
     }
   });
 
   async function loadExistingData(editDate: string) {
     isLoading = true;
-    error = '';
-    
+    error = "";
+
     try {
       const response = await fetch(`/api/investments`);
       if (!response.ok) {
-        throw new Error('Failed to fetch investments');
+        throw new Error("Failed to fetch investments");
       }
-      
+
       const investments = await response.json();
       const existingInvestment = investments.find((inv: any) => inv.date === editDate);
-      
+
       if (existingInvestment) {
         value = existingInvestment.value.toString();
       } else {
-        error = 'Investment not found for this date';
+        error = "Investment not found for this date";
       }
     } catch (err) {
-      error = 'Failed to load investment data';
-      console.error('Error loading investment data:', err);
+      error = "Failed to load investment data";
+      console.error("Error loading investment data:", err);
     } finally {
       isLoading = false;
     }
@@ -100,13 +124,13 @@
 
   async function checkDateExists(dateToCheck: string): Promise<boolean> {
     try {
-      const response = await fetch('/api/investments');
+      const response = await fetch("/api/investments");
       if (response.ok) {
         const investments = await response.json();
         return investments.some((inv: any) => inv.date === dateToCheck);
       }
     } catch (err) {
-      console.error('Error checking existing dates:', err);
+      console.error("Error checking existing dates:", err);
     }
     return false;
   }
@@ -114,13 +138,18 @@
   async function handleSubmit(event?: SubmitEvent) {
     event?.preventDefault();
     if (!date || !value) {
-      error = 'Please fill in all fields';
+      error = "Please fill in all fields";
+      return;
+    }
+
+    if (!currentPortfolio && $portfolios.length > 0) {
+      error = "Please select a portfolio";
       return;
     }
 
     const numValue = parseFloat(value);
     if (isNaN(numValue) || numValue < 0) {
-      error = 'Please enter a valid positive number';
+      error = "Please enter a valid positive number";
       return;
     }
 
@@ -136,27 +165,27 @@
       if (carryOverWeekend && isFriday()) {
         const saturdayExists = await checkDateExists(weekendDates().saturday);
         const sundayExists = await checkDateExists(weekendDates().sunday);
-        
+
         if (saturdayExists || sundayExists) {
           const existingDays = [];
-          if (saturdayExists) existingDays.push('Saturday');
-          if (sundayExists) existingDays.push('Sunday');
-          error = `Cannot carry over to weekend: entries already exist for ${existingDays.join(' and ')}. Please edit those entries individually if needed.`;
+          if (saturdayExists) existingDays.push("Saturday");
+          if (sundayExists) existingDays.push("Sunday");
+          error = `Cannot carry over to weekend: entries already exist for ${existingDays.join(" and ")}. Please edit those entries individually if needed.`;
           return;
         }
       }
     }
 
     isLoading = true;
-    error = '';
+    error = "";
 
     try {
-      const method = isEditMode ? 'PUT' : 'POST';
-      
+      const method = isEditMode ? "PUT" : "POST";
+
       // Prepare request body - include weekend carry-over info if applicable
       const requestBody: any = {
         date,
-        value: numValue
+        value: numValue,
       };
 
       if (!isEditMode && carryOverWeekend && isFriday()) {
@@ -164,58 +193,60 @@
         requestBody.weekendDates = weekendDates();
       }
 
-      const response = await fetch('/api/investments', {
+      // Use portfolio-specific endpoint if portfolio is selected
+      const apiUrl = currentPortfolio ? `/api/portfolios/${currentPortfolio.id}/investments` : "/api/investments";
+
+      const response = await fetch(apiUrl, {
         method,
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        
+
         // Handle specific conflict error (409) for duplicate dates
         if (response.status === 409) {
-          error = `${errorData.error} Current value: $${errorData.existingValue?.toLocaleString() || 'N/A'}`;
+          error = `${errorData.error} Current value: $${errorData.existingValue?.toLocaleString() || "N/A"}`;
         } else {
-          throw new Error(errorData.error || `Failed to ${isEditMode ? 'update' : 'save'} investment`);
+          throw new Error(errorData.error || `Failed to ${isEditMode ? "update" : "save"} investment`);
         }
         return;
       }
 
       const responseData = await response.json();
       success = true;
-      
+
       // Store weekend carry-over info for success message
       if (responseData.weekendCarryOver) {
         weekendCarryOverInfo = ` Also saved for ${formatDate(responseData.weekendCarryOver.saturday)} and ${formatDate(responseData.weekendCarryOver.sunday)}.`;
       } else {
-        weekendCarryOverInfo = '';
+        weekendCarryOverInfo = "";
       }
-      
+
       if (!isEditMode) {
         // Reset form only for new entries
-        value = '';
-        date = format(new Date(), 'yyyy-MM-dd');
+        value = "";
+        date = format(new Date(), "yyyy-MM-dd");
         carryOverWeekend = false;
-        weekendCarryOverInfo = '';
+        weekendCarryOverInfo = "";
       }
-      
+
       // Show success message briefly then redirect
       setTimeout(() => {
-        goto('/dashboard');
+        goto("/dashboard");
       }, 1500);
-
     } catch (err) {
-      error = err instanceof Error ? err.message : 'An error occurred';
+      error = err instanceof Error ? err.message : "An error occurred";
     } finally {
       isLoading = false;
     }
   }
 
   function handleKeydown(event: KeyboardEvent) {
-    if (event.key === 'Enter' && !event.shiftKey) {
+    if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       handleSubmit();
     }
@@ -223,7 +254,7 @@
 </script>
 
 <svelte:head>
-  <title>{isEditMode ? 'Edit Entry' : 'Add Entry'} - Money Monitor</title>
+  <title>{isEditMode ? "Edit Entry" : "Add Entry"} - Money Monitor</title>
 </svelte:head>
 
 <!-- Enhanced layout with better spacing and background -->
@@ -239,10 +270,10 @@
         {/if}
       </div>
       <h1 class="text-4xl font-bold text-gray-900 mb-3">
-        {isEditMode ? 'Edit Investment Entry' : 'Add Investment Entry'}
+        {isEditMode ? "Edit Investment Entry" : "Add Investment Entry"}
       </h1>
       <p class="text-lg text-gray-600 max-w-md mx-auto">
-        {isEditMode ? 'Update your portfolio value for this date' : 'Record your portfolio value for a specific date'}
+        {isEditMode ? "Update your portfolio value for this date" : "Record your portfolio value for a specific date"}
       </p>
     </div>
 
@@ -272,7 +303,7 @@
               </div>
               <div>
                 <p class="text-success-900 font-semibold text-lg">
-                  Investment entry {isEditMode ? 'updated' : 'saved'} successfully!
+                  Investment entry {isEditMode ? "updated" : "saved"} successfully!
                 </p>
                 <p class="text-success-700 text-sm mt-1">
                   {#if weekendCarryOverInfo}
@@ -298,16 +329,64 @@
           </div>
         {/if}
 
-        <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }} class="space-y-8">
+        <form
+          onsubmit={(e) => {
+            e.preventDefault();
+            handleSubmit();
+          }}
+          class="space-y-8"
+        >
+          <!-- Portfolio Selection -->
           <div>
-            <label for="date" class="block text-sm font-semibold text-gray-800 mb-3">
-              Date
+            <label class="block text-sm font-semibold text-gray-800 mb-3">
+              <Folder class="w-4 h-4 inline mr-1" />
+              Portfolio
             </label>
+            {#if $portfolioIsLoading}
+              <div class="animate-pulse">
+                <div class="h-12 bg-gray-200 rounded-xl"></div>
+              </div>
+            {:else if $portfolios.length > 0}
+              <PortfolioSelector
+                portfolios={$portfolios}
+                selectedPortfolio={currentPortfolio}
+                disabled={isLoading}
+                on:select={(e) => {
+                  currentPortfolio = e.detail;
+                }}
+                on:create={async (e) => {
+                  const result = await portfolioStore.createPortfolio(e.detail.name);
+                  if (result) currentPortfolio = result;
+                }}
+                on:rename={(e) => portfolioStore.renamePortfolio(e.detail.portfolio, e.detail.newName)}
+                on:delete={(e) => portfolioStore.deletePortfolio(e.detail)}
+              />
+              {#if $portfolioError}
+                <p class="text-sm text-red-600 mt-2">
+                  <AlertCircle class="w-4 h-4 inline mr-1" />
+                  {$portfolioError}
+                </p>
+              {/if}
+            {:else}
+              <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                <p class="text-yellow-800 text-sm">
+                  <AlertCircle class="w-4 h-4 inline mr-1" />
+                  No portfolios found. A "Main Portfolio" will be created automatically.
+                </p>
+              </div>
+            {/if}
+            <p class="text-sm text-gray-500 mt-3">Select the portfolio to add this investment entry to</p>
+          </div>
+
+          <div>
+            <label for="date" class="block text-sm font-semibold text-gray-800 mb-3"> Date </label>
             <input
               id="date"
               type="date"
               bind:value={date}
-              class="w-full px-4 py-4 text-lg border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all {isEditMode ? 'bg-gray-50 cursor-not-allowed text-gray-600' : 'bg-white'}"
+              class="w-full px-4 py-4 text-lg border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all {isEditMode
+                ? 'bg-gray-50 cursor-not-allowed text-gray-600'
+                : 'bg-white'}"
               required
               disabled={isLoading || isEditMode}
               readonly={isEditMode}
@@ -319,14 +398,14 @@
               </p>
             {/if}
             <p class="text-sm text-gray-500 mt-3">
-              {isEditMode ? 'Date cannot be changed when editing an existing entry' : 'Select the date for this investment value'}
+              {isEditMode
+                ? "Date cannot be changed when editing an existing entry"
+                : "Select the date for this investment value"}
             </p>
           </div>
 
           <div>
-            <label for="value" class="block text-sm font-semibold text-gray-800 mb-3">
-              Portfolio Value ($)
-            </label>
+            <label for="value" class="block text-sm font-semibold text-gray-800 mb-3"> Portfolio Value ($) </label>
             <div class="relative">
               <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                 <span class="text-gray-500 text-lg font-medium">$</span>
@@ -336,7 +415,7 @@
                 type="number"
                 step="0.01"
                 min="0"
-                bind:value={value}
+                bind:value
                 class="w-full pl-8 pr-4 py-4 text-lg border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white"
                 placeholder={isLoading && isEditMode ? "Loading..." : "0.00"}
                 required
@@ -344,9 +423,7 @@
                 onkeydown={handleKeydown}
               />
             </div>
-            <p class="text-sm text-gray-500 mt-3">
-              Enter the total value of your investment portfolio
-            </p>
+            <p class="text-sm text-gray-500 mt-3">Enter the total value of your investment portfolio</p>
           </div>
 
           {#if !isEditMode && isFriday()}
@@ -390,7 +467,7 @@
             >
               {#if isLoading}
                 <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                <span>{isEditMode ? 'Updating...' : 'Saving...'}</span>
+                <span>{isEditMode ? "Updating..." : "Saving..."}</span>
               {:else if isEditMode}
                 <Edit3 class="w-5 h-5" />
                 <span>Update Entry</span>
@@ -400,7 +477,10 @@
               {/if}
             </button>
 
-            <a href="/dashboard" class="w-full sm:w-auto btn-secondary px-8 py-4 text-lg font-semibold rounded-xl text-center">
+            <a
+              href="/dashboard"
+              class="w-full sm:w-auto btn-secondary px-8 py-4 text-lg font-semibold rounded-xl text-center"
+            >
               Cancel
             </a>
           </div>
@@ -433,4 +513,4 @@
       </div>
     </div>
   </div>
-</div> 
+</div>
