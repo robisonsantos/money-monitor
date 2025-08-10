@@ -14,6 +14,7 @@
     "seed": "node scripts/seed.js",
     "db:setup": "node scripts/setup-postgres.js",
     "db:migrate": "node scripts/migrate-sqlite-to-postgres.js",
+    "db:migrate-portfolios": "node scripts/migrate-portfolios.js",
     "db:cleanup-sessions": "node scripts/cleanup-sessions.js",
     "db:start": "./scripts/db-docker.sh start",
     "db:start-admin": "./scripts/db-docker.sh start-admin",
