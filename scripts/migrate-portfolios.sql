@@ -53,6 +53,8 @@ CREATE INDEX IF NOT EXISTS idx_investments_portfolio_date ON investments(portfol
 -- Step 7: Update the unique constraint to include portfolio_id
 -- Drop the old constraint and create a new one
 DROP INDEX IF EXISTS idx_investments_user_date_unique;
+-- Also drop the constraint that was created by the initial schema setup
+ALTER TABLE investments DROP CONSTRAINT IF EXISTS investments_user_id_date_key;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_investments_portfolio_date_unique
 ON investments(portfolio_id, date);
 
