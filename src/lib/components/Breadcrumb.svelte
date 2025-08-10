@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from "$app/stores";
-  import { ChevronRight, Home, BarChart3, Plus, Folder, AlertCircle, Edit3 } from "lucide-svelte";
+  import { ChevronRight, Home, Plus, Folder, AlertCircle, Edit3 } from "lucide-svelte";
   import type { Portfolio } from "$lib/database";
 
   interface Props {
@@ -77,20 +77,15 @@
       <li class="inline-flex items-center">
         <ChevronRight class="w-4 h-4 text-gray-400 mx-1 md:mx-2" />
         <span class="inline-flex items-center space-x-1 font-medium text-gray-500">
-          {#if isEditMode}
+          {#if isEditMode()}
             <Edit3 class="w-4 h-4" />
           {:else}
             <Plus class="w-4 h-4" />
           {/if}
           <div class="flex flex-col">
-            <span>{isEditMode ? "Edit Entry" : "Add Entry"}</span>
-            {#if selectedPortfolio}
-              <span class="text-xs text-gray-400 hidden sm:block">
-                {isEditMode ? `in ${selectedPortfolio.name}` : `to ${selectedPortfolio.name}`}
-              </span>
-            {/if}
-          </div>
-        </span>
+            <span>{isEditMode() ? "Edit Entry" : "Add Entry"}</span>
+          </div></span
+        >
       </li>
     {/if}
   </ol>
