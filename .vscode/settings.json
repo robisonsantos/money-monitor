@@ -1,0 +1,80 @@
+{
+  "svelte.enable-ts-plugin": true,
+  "svelte.plugin.svelte.defaultScriptLanguage": "ts",
+  "svelte.plugin.typescript.enable": true,
+  "svelte.plugin.typescript.diagnostics.enable": true,
+  "svelte.plugin.typescript.hover.enable": true,
+  "svelte.plugin.typescript.completions.enable": true,
+  "svelte.plugin.typescript.findReferences.enable": true,
+  "svelte.plugin.typescript.definitions.enable": true,
+  "svelte.plugin.typescript.codeActions.enable": true,
+  "svelte.plugin.typescript.rename.enable": true,
+  "svelte.plugin.typescript.selectionRange.enable": true,
+  "svelte.plugin.typescript.signatureHelp.enable": true,
+  "svelte.plugin.typescript.semanticTokens.enable": true,
+  "typescript.preferences.includePackageJsonAutoImports": "on",
+  "typescript.suggest.autoImports": true,
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  "typescript.tsc.autoDetect": "off",
+  "typescript.disableAutomaticTypeAcquisition": true,
+  "typescript.surveys.enabled": false,
+  "typescript.workspaceSymbols.scope": "currentProject",
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/.git": true,
+    "**/.svelte-kit": true,
+    "**/build": true,
+    "**/dist": true,
+    "**/coverage": true,
+    "**/postgres_data": true,
+    "**/*.log": true,
+    "**/.env": true,
+    "**/.env.*": true,
+    "**/package-lock.json": true,
+    "**/yarn.lock": true,
+    "**/.npm": true,
+    "**/.yarn": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.svelte-kit": true,
+    "**/build": true,
+    "**/dist": true,
+    "**/coverage": true,
+    "**/postgres_data": true,
+    "**/*.log": true,
+    "**/package-lock.json": true,
+    "**/yarn.lock": true
+  },
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/node_modules/*/**": true,
+    "**/.svelte-kit/**": true,
+    "**/postgres_data/**": true,
+    "**/coverage/**": true,
+    "**/build/**": true,
+    "**/dist/**": true,
+    "**/*.log": true,
+    "**/package-lock.json": true,
+    "**/yarn.lock": true
+  },
+  "typescript.preferences.organizeImports": true,
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "explicit"
+  },
+  "[svelte]": {
+    "editor.defaultFormatter": "svelte.svelte-vscode"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  }
+}

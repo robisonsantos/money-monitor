@@ -31,7 +31,9 @@ data.db-wal
 seed/seed_data.json
 
 # IDE files
-.vscode/
+.vscode/settings.local.json
+.vscode/launch.json
+.vscode/*.code-workspace
 .idea/
 *.swp
 *.swo
@@ -48,4 +50,14 @@ logs
 pids
 *.pid
 *.seed
-*.pid.lock 
+*.pid.lock
+
+# Docker
+docker-compose.override.yml
+.docker/
+
+# Database volumes and backups
+/postgres_data
+postgres_data/
+*.sql.backup
+*.dump

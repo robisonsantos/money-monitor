@@ -41,6 +41,33 @@ This application implements **bank-grade security** for protecting your financia
 
 ### Installation
 
+#### Option A: Docker Setup (Recommended for Development)
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd money-monitor
+```
+
+2. **Quick setup with Docker**:
+```bash
+# Interactive configuration (sets up DATA_DIR and .env)
+npm run configure
+
+# Install dependencies
+npm install
+
+# Start PostgreSQL in Docker
+npm run db:start
+
+# Start development server
+npm run dev
+```
+
+3. Open [http://localhost:5173](http://localhost:5173) in your browser
+
+#### Option B: Manual PostgreSQL Setup
+
 1. Clone the repository:
 ```bash
 git clone <repository-url>
@@ -121,6 +148,43 @@ npm run dev
 
 9. Open [http://localhost:5173](http://localhost:5173) in your browser
 
+## Docker Development Setup
+
+For the easiest development experience, use Docker for your PostgreSQL database:
+
+### Quick Start
+```bash
+npm run configure    # Interactive setup
+npm run db:start     # Start PostgreSQL
+npm run dev          # Start application
+```
+
+### Docker Commands
+```bash
+npm run db:start         # Start PostgreSQL database
+npm run db:start-admin   # Start with pgAdmin web interface
+npm run db:stop          # Stop database
+npm run db:status        # Check database status
+npm run db:logs          # View database logs
+npm run db:connect       # Open database shell
+npm run db:reset         # Reset database (deletes all data)
+```
+
+### Configuration
+- **Data Directory**: Configurable via `DATA_DIR` environment variable
+- **Default Location**: `./postgres_data` (project directory)
+- **Custom Setup**: Run `npm run configure` for interactive configuration
+- **Manual Setup**: Copy `.env.example` to `.env` and customize
+
+### Database Access
+- **Host**: localhost:5432
+- **Database**: money_monitor
+- **Username**: postgres
+- **Password**: dev_password_123
+- **pgAdmin**: http://localhost:8080 (when using `npm run db:start-admin`)
+
+See [DOCKER_SETUP.md](./DOCKER_SETUP.md) for detailed Docker documentation.
+
 ## Environment Variables
 
 | Variable | Required | Description | Example |
@@ -133,6 +197,7 @@ npm run dev
 | `DB_PASSWORD` | ⚠️ Fallback | Database password | `your_password` |
 | `DB_NAME` | ⚠️ Fallback | Database name | `money_monitor` |
 | `DB_SSL` | ❌ No | Enable SSL connection | `true` or `false` |
+| `DATA_DIR` | ❌ No | Docker PostgreSQL data directory | `./postgres_data` |
 
 ## Data Structure
 
