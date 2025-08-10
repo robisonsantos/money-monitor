@@ -6,18 +6,10 @@
   NODE_VERSION = "18"
   NPM_FLAGS = "--production=false"
 
-# Build hooks - run migrations before build
-[[plugins]]
-  package = "@netlify/plugin-functions"
-
 # Environment variables that should be set in Netlify dashboard:
 # ENCRYPTION_KEY - 64-character hex string for data encryption
 # DATABASE_URL - PostgreSQL connection string
 # NODE_ENV - set to "production"
-
-[functions]
-  directory = "netlify/functions"
-  node_bundler = "esbuild"
 
 # SvelteKit routing - redirect all routes to index.html for SPA routing
 [[redirects]]
