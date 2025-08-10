@@ -1,15 +1,17 @@
 <script lang="ts">
-  import { Upload, Download, FileText, AlertCircle, CheckCircle, X } from 'lucide-svelte';
-  import type { AggregationPeriod, FilterPeriod } from '$lib/utils';
+  import { Upload, Download, FileText, AlertCircle, CheckCircle, X } from "lucide-svelte";
+  import type { AggregationPeriod, FilterPeriod } from "$lib/utils";
+  import type { Portfolio } from "$lib/database";
 
   interface Props {
     selectedPeriod: AggregationPeriod;
     selectedFilter: FilterPeriod;
+    selectedPortfolio?: Portfolio | null;
     onImportSuccess?: () => void;
     importOnly?: boolean; // Show only import button (for empty states)
   }
 
-  let { selectedPeriod, selectedFilter, onImportSuccess, importOnly = false }: Props = $props();
+  let { selectedPeriod, selectedFilter, selectedPortfolio, onImportSuccess, importOnly = false }: Props = $props();
 
   let fileInput: HTMLInputElement | undefined = $state();
   let isImporting = $state(false);
@@ -20,7 +22,7 @@
   async function handleFileImport(event: Event) {
     const target = event.target as HTMLInputElement;
     const file = target.files?.[0];
-    
+
     if (!file) return;
 
     isImporting = true;
@@ -28,12 +30,17 @@
 
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append("file", file);
 
-      const response = await fetch('/api/investments/import', {
-        method: 'POST',
+      // Add portfolio ID if available
+      if (selectedPortfolio) {
+        formData.append("portfolioId", selectedPortfolio.id.toString());
+      }
+
+      const response = await fetch("/api/investments/import", {
+        method: "POST",
         body: formData,
-        credentials: 'include'
+        credentials: "include",
       });
 
       const result = await response.json();
@@ -41,27 +48,27 @@
       if (response.ok) {
         importResult = {
           success: true,
-          message: result.message
+          message: result.message,
         };
         onImportSuccess?.();
       } else {
         importResult = {
           success: false,
           message: result.error,
-          errors: result.errors
+          errors: result.errors,
         };
       }
     } catch (error) {
-      console.error('CSV import error:', error);
+      console.error("CSV import error:", error);
       importResult = {
         success: false,
-        message: `Failed to import CSV file: ${error instanceof Error ? error.message : 'Unknown error'}`
+        message: `Failed to import CSV file: ${error instanceof Error ? error.message : "Unknown error"}`,
       };
     } finally {
       isImporting = false;
       // Clear the file input
       if (fileInput) {
-        fileInput.value = '';
+        fileInput.value = "";
       }
     }
   }
@@ -72,18 +79,23 @@
     try {
       const params = new URLSearchParams({
         period: selectedPeriod,
-        filter: selectedFilter
+        filter: selectedFilter,
       });
 
+      // Add portfolio ID if available
+      if (selectedPortfolio) {
+        params.set("portfolioId", selectedPortfolio.id.toString());
+      }
+
       const response = await fetch(`/api/investments/export?${params}`, {
-        credentials: 'include'
+        credentials: "include",
       });
 
       if (response.ok) {
         // Get the filename from the Content-Disposition header
-        const contentDisposition = response.headers.get('Content-Disposition');
-        let filename = 'investments.csv';
-        
+        const contentDisposition = response.headers.get("Content-Disposition");
+        let filename = "investments.csv";
+
         if (contentDisposition) {
           const match = contentDisposition.match(/filename="(.+)"/);
           if (match) {
@@ -94,7 +106,7 @@
         // Download the file
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
+        const link = document.createElement("a");
         link.href = url;
         link.download = filename;
         link.click();
@@ -104,7 +116,7 @@
         alert(`Export failed: ${error.error}`);
       }
     } catch (error) {
-      alert('Failed to export CSV file');
+      alert("Failed to export CSV file");
     } finally {
       isExporting = false;
     }
@@ -126,13 +138,13 @@
       title="Export current filtered data to CSV"
     >
       <Download class="w-4 h-4" />
-      <span>{isExporting ? 'Exporting...' : 'Export CSV'}</span>
+      <span>{isExporting ? "Exporting..." : "Export CSV"}</span>
     </button>
   {/if}
 
   <!-- Import Button -->
   <button
-    onclick={() => showImportDialog = true}
+    onclick={() => (showImportDialog = true)}
     class="btn-primary flex items-center justify-center space-x-2 w-full sm:w-auto"
     title="Import investments from CSV file"
   >
@@ -147,10 +159,7 @@
     <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-semibold text-gray-900">Import CSV File</h3>
-        <button
-          onclick={closeImportDialog}
-          class="text-gray-400 hover:text-gray-600"
-        >
+        <button onclick={closeImportDialog} class="text-gray-400 hover:text-gray-600">
           <X class="w-6 h-6" />
         </button>
       </div>
@@ -158,13 +167,16 @@
       <div class="mb-4">
         <p class="text-sm text-gray-600 mb-3">
           Upload a CSV file with investment data. The file should have two columns: Date (YYYY-MM-DD) and Value.
+          {#if selectedPortfolio}
+            <br /><strong>Importing to:</strong> {selectedPortfolio.name}
+          {/if}
         </p>
-        
+
         <div class="bg-gray-50 rounded-md p-3 mb-3">
           <p class="text-xs text-gray-500 mb-1">Example format:</p>
           <code class="text-xs text-gray-700">
-            Date,Value<br>
-            2024-01-01,254000<br>
+            Date,Value<br />
+            2024-01-01,254000<br />
             2024-01-02,255500
           </code>
         </div>
@@ -180,11 +192,8 @@
             class="hidden"
             id="csv-file-input"
           />
-          <label
-            for="csv-file-input"
-            class="cursor-pointer text-blue-600 hover:text-blue-800 font-medium"
-          >
-            {isImporting ? 'Processing...' : 'Choose CSV file'}
+          <label for="csv-file-input" class="cursor-pointer text-blue-600 hover:text-blue-800 font-medium">
+            {isImporting ? "Processing..." : "Choose CSV file"}
           </label>
           <p class="text-xs text-gray-500 mt-1">Maximum file size: 5MB</p>
         </div>
@@ -224,13 +233,8 @@
       {/if}
 
       <div class="flex justify-end space-x-3">
-        <button
-          onclick={closeImportDialog}
-          class="btn-secondary"
-        >
-          Close
-        </button>
+        <button onclick={closeImportDialog} class="btn-secondary"> Close </button>
       </div>
     </div>
   </div>
-{/if} 
+{/if}

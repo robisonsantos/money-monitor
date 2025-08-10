@@ -681,6 +681,7 @@ export const investmentDb = {
       );
       return result.rows.map((investment) => ({
         ...investment,
+        date: investment.date instanceof Date ? investment.date.toISOString().split("T")[0] : investment.date,
         value: decryptValue(investment.value),
       }));
     } finally {
@@ -710,6 +711,7 @@ export const investmentDb = {
       );
       return result.rows.map((investment) => ({
         ...investment,
+        date: investment.date instanceof Date ? investment.date.toISOString().split("T")[0] : investment.date,
         value: decryptValue(investment.value),
       }));
     } finally {
@@ -779,6 +781,7 @@ export const investmentDb = {
       );
       return result.rows.map((investment) => ({
         ...investment,
+        date: investment.date instanceof Date ? investment.date.toISOString().split("T")[0] : investment.date,
         value: decryptValue(investment.value),
       }));
     } finally {

@@ -233,7 +233,12 @@
 
         <!-- CSV Controls -->
         <div class="w-full sm:w-auto sm:flex-shrink-0">
-          <CSVManager {selectedPeriod} {selectedFilter} onImportSuccess={handleImportSuccess} />
+          <CSVManager
+            {selectedPeriod}
+            {selectedFilter}
+            selectedPortfolio={$selectedPortfolio}
+            onImportSuccess={handleImportSuccess}
+          />
         </div>
       </div>
     </div>
@@ -295,6 +300,7 @@
           <CSVManager
             selectedPeriod="daily"
             selectedFilter="all"
+            selectedPortfolio={$selectedPortfolio}
             onImportSuccess={handleImportSuccess}
             importOnly={true}
           />

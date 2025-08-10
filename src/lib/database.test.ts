@@ -493,4 +493,73 @@ describe("investmentDb", () => {
       expect(mockClient.query).toHaveBeenCalledWith("ROLLBACK");
     });
   });
+
+  describe("bulkInsertInvestmentsToPortfolio", () => {
+    it("should insert multiple investments to specific portfolio", async () => {
+      const portfolioId = 2;
+      const mockPortfolio = { id: portfolioId, user_id: TEST_USER_ID, name: "Test Portfolio", created_at: new Date() };
+      const investments = [
+        { date: "2024-01-01", value: 100000 },
+        { date: "2024-01-02", value: 102000 },
+      ];
+
+      mockClient.query.mockImplementation((query, params) => {
+        const queryStr = typeof query === "string" ? query : query.text || "";
+        if (queryStr.includes("SELECT * FROM portfolios WHERE id = $1 AND user_id = $2")) {
+          return Promise.resolve({ rows: [mockPortfolio] });
+        }
+        return Promise.resolve({ rows: [] });
+      });
+
+      const result = await investmentDb.bulkInsertInvestmentsToPortfolio(TEST_USER_ID, portfolioId, investments);
+
+      expect(mockClient.query).toHaveBeenCalledWith("BEGIN");
+      expect(mockClient.query).toHaveBeenCalledWith("COMMIT");
+      expect(result).toBe(2);
+    });
+
+    it("should throw error if portfolio not found", async () => {
+      const portfolioId = 999;
+      const investments = [{ date: "2024-01-01", value: 100000 }];
+
+      mockClient.query.mockImplementation((query, params) => {
+        const queryStr = typeof query === "string" ? query : query.text || "";
+        if (queryStr.includes("SELECT * FROM portfolios WHERE id = $1 AND user_id = $2")) {
+          return Promise.resolve({ rows: [] });
+        }
+        return Promise.resolve({ rows: [] });
+      });
+
+      await expect(
+        investmentDb.bulkInsertInvestmentsToPortfolio(TEST_USER_ID, portfolioId, investments),
+      ).rejects.toThrow("Portfolio not found or access denied");
+    });
+
+    it("should rollback transaction on error during insert", async () => {
+      const portfolioId = 2;
+      const mockPortfolio = { id: portfolioId, user_id: TEST_USER_ID, name: "Test Portfolio", created_at: new Date() };
+      const investments = [{ date: "2024-01-01", value: 100000 }];
+
+      mockClient.query.mockImplementation((query, params) => {
+        const queryStr = typeof query === "string" ? query : query.text || "";
+
+        if (queryStr === "BEGIN") return Promise.resolve({ rows: [] });
+        if (queryStr === "ROLLBACK") return Promise.resolve({ rows: [] });
+        if (queryStr === "COMMIT") return Promise.resolve({ rows: [] });
+
+        if (queryStr.includes("SELECT * FROM portfolios WHERE id = $1 AND user_id = $2")) {
+          return Promise.resolve({ rows: [mockPortfolio] });
+        }
+        if (queryStr.includes("INSERT INTO investments")) {
+          throw new Error("Database error");
+        }
+        return Promise.resolve({ rows: [] });
+      });
+
+      await expect(
+        investmentDb.bulkInsertInvestmentsToPortfolio(TEST_USER_ID, portfolioId, investments),
+      ).rejects.toThrow("Database error");
+      expect(mockClient.query).toHaveBeenCalledWith("ROLLBACK");
+    });
+  });
 });
