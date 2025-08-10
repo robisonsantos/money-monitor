@@ -101,7 +101,9 @@
     error = "";
 
     try {
-      const response = await fetch(`/api/investments`);
+      // Use portfolio-specific endpoint if portfolio is selected
+      const apiUrl = currentPortfolio ? `/api/portfolios/${currentPortfolio.id}/investments` : "/api/investments";
+      const response = await fetch(apiUrl);
       if (!response.ok) {
         throw new Error("Failed to fetch investments");
       }
@@ -124,7 +126,9 @@
 
   async function checkDateExists(dateToCheck: string): Promise<boolean> {
     try {
-      const response = await fetch("/api/investments");
+      // Use portfolio-specific endpoint if portfolio is selected
+      const apiUrl = currentPortfolio ? `/api/portfolios/${currentPortfolio.id}/investments` : "/api/investments";
+      const response = await fetch(apiUrl);
       if (response.ok) {
         const investments = await response.json();
         return investments.some((inv: any) => inv.date === dateToCheck);

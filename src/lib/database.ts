@@ -640,6 +640,30 @@ export const investmentDb = {
     }
   },
 
+  // Get investment by date from specific portfolio - decrypts value after retrieval
+  getInvestmentFromPortfolio: async (
+    userId: number,
+    portfolioId: number,
+    date: string,
+  ): Promise<Investment | undefined> => {
+    const client = await pool.connect();
+    try {
+      const result = await client.query(
+        "SELECT * FROM investments WHERE user_id = $1 AND portfolio_id = $2 AND date = $3",
+        [userId, portfolioId, date],
+      );
+      const investment = result.rows[0];
+      if (investment) {
+        investment.date =
+          investment.date instanceof Date ? investment.date.toISOString().split("T")[0] : investment.date;
+        investment.value = decryptValue(investment.value);
+      }
+      return investment;
+    } finally {
+      client.release();
+    }
+  },
+
   // Get all investments (user-scoped) - backward compatible
   getAllInvestments: async (userId: number): Promise<Investment[]> => {
     const defaultPortfolio = await portfolioDb.getDefaultPortfolio(userId);
