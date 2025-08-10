@@ -4,7 +4,7 @@
   import StatsCard from "$lib/components/StatsCard.svelte";
   import RecentEntries from "$lib/components/RecentEntries.svelte";
   import CSVManager from "$lib/components/CSVManager.svelte";
-  import PortfolioSelector from "$lib/components/PortfolioSelector.svelte";
+  import DashboardHeader from "$lib/components/DashboardHeader.svelte";
   import {
     aggregateInvestments,
     calculatePortfolioStats,
@@ -175,35 +175,26 @@
 </script>
 
 <div class="space-y-6">
-  <!-- Header with Portfolio Selector -->
-  <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 lg:gap-6">
-    <div class="flex-shrink-0">
-      <h1 class="text-2xl lg:text-3xl font-bold text-gray-900">Investment Dashboard</h1>
-      <p class="text-gray-600 mt-1">Track your portfolio performance over time</p>
-    </div>
+  <!-- Dashboard Header with Integrated Portfolio Management -->
+  <DashboardHeader
+    portfolios={$portfolios}
+    selectedPortfolio={$selectedPortfolio}
+    isLoading={$portfolioIsLoading}
+    on:select={handlePortfolioSelect}
+    on:create={handlePortfolioCreate}
+    on:rename={handlePortfolioRename}
+    on:delete={handlePortfolioDelete}
+  />
 
-    <!-- Portfolio Selector -->
-    <div class="lg:w-80">
-      <div class="space-y-2">
-        <label class="block text-sm font-medium text-gray-700"> Portfolio </label>
-        <PortfolioSelector
-          portfolios={$portfolios}
-          selectedPortfolio={$selectedPortfolio}
-          isLoading={$portfolioIsLoading}
-          on:select={handlePortfolioSelect}
-          on:create={handlePortfolioCreate}
-          on:rename={handlePortfolioRename}
-          on:delete={handlePortfolioDelete}
-        />
-        {#if $portfolioError}
-          <div class="flex items-center text-sm text-red-600">
-            <AlertCircle class="w-4 h-4 mr-1" />
-            {$portfolioError}
-          </div>
-        {/if}
+  <!-- Portfolio Error Display -->
+  {#if $portfolioError}
+    <div class="card border-red-200 bg-red-50">
+      <div class="flex items-center text-red-700">
+        <AlertCircle class="w-5 h-5 mr-2" />
+        <span>{$portfolioError}</span>
       </div>
     </div>
-  </div>
+  {/if}
 
   <!-- Investment Data Error -->
   {#if investmentError}
