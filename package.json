@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
+    "build:netlify": "npm run migrate:production && vite build",
+    "build:preview": "npm run migrate:production && vite build --mode development",
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
@@ -15,6 +17,8 @@
     "db:setup": "node scripts/setup-postgres.js",
     "db:migrate": "node scripts/migrate-sqlite-to-postgres.js",
     "db:migrate-portfolios": "node scripts/migrate-portfolios.js",
+    "migrate:production": "node scripts/migrate-production.js",
+    "verify:deployment": "node scripts/verify-netlify-deployment.js",
     "db:cleanup-sessions": "node scripts/cleanup-sessions.js",
     "db:start": "./scripts/db-docker.sh start",
     "db:start-admin": "./scripts/db-docker.sh start-admin",
@@ -37,6 +41,7 @@
   "devDependencies": {
     "@playwright/test": "^1.54.1",
     "@sveltejs/adapter-auto": "^3.3.1",
+    "@sveltejs/adapter-netlify": "^5.1.1",
     "@sveltejs/kit": "^2.25.1",
     "@sveltejs/vite-plugin-svelte": "^5.1.1",
     "@tailwindcss/typography": "^0.5.15",
