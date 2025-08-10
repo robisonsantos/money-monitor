@@ -146,7 +146,13 @@ cp seed/seed_data.example.json seed/seed_data.json
 npm run dev
 ```
 
-9. Open [http://localhost:5173](http://localhost:5173) in your browser
+9. **Seed the database with sample data** (optional, requires dev server):
+```bash
+# In a new terminal window, while dev server is running:
+npm run seed
+```
+
+10. Open [http://localhost:5173](http://localhost:5173) in your browser
 
 ## Docker Development Setup
 
@@ -156,6 +162,7 @@ For the easiest development experience, use Docker for your PostgreSQL database:
 ```bash
 npm run configure    # Interactive setup
 npm run db:start     # Start PostgreSQL
+npm run seed         # Seed with sample data (optional)
 npm run dev          # Start application
 ```
 
@@ -182,6 +189,17 @@ npm run db:reset         # Reset database (deletes all data)
 - **Username**: postgres
 - **Password**: dev_password_123
 - **pgAdmin**: http://localhost:8080 (when using `npm run db:start-admin`)
+
+### Seeding Data
+The `npm run seed` command seeds the database directly and can be run independently:
+
+```bash
+# Make sure PostgreSQL is running
+npm run db:start
+
+# Seed the database (optional)
+npm run seed
+```
 
 See [DOCKER_SETUP.md](./DOCKER_SETUP.md) for detailed Docker documentation.
 

@@ -11,6 +11,7 @@ npm run db:start
 
 # 3. Install & start
 npm install
+npm run seed         # Seed with sample data (optional)
 npm run dev
 ```
 
@@ -155,7 +156,35 @@ npm run db:start
 echo "DATA_DIR=/your/custom/path" >> .env
 ```
 
+## 📊 Seeding Sample Data
+
+The seed script adds sample investment data for testing:
+
+```bash
+# 1. Start the database and seed (optional)
+npm run db:start
+npm run seed
+
+# 2. Start the application
+npm run dev
+```
+
+**Note:** The seed script connects directly to the PostgreSQL database and doesn't require the development server to be running.
+
 ## 🐛 Common Issues
+
+### Seeding fails with database connection errors
+This means the PostgreSQL database isn't running:
+```bash
+# Start database first
+npm run db:start
+
+# Then seed
+npm run seed
+
+# Then start dev server
+npm run dev
+```
 
 ### VS Code: "Svelte language server detected large amount of files"
 
