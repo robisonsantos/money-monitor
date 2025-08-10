@@ -1,14 +1,14 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { Edit3, Loader } from 'lucide-svelte';
-  import { formatCurrency, formatDate, type AggregatedData } from '$lib/utils';
+  import { onMount } from "svelte";
+  import { Edit3, Loader } from "lucide-svelte";
+  import { formatCurrency, formatDate, type AggregatedData } from "$lib/utils";
 
   // Accept filtered data from parent dashboard
   interface Props {
     filteredInvestments?: AggregatedData[];
     isLoading?: boolean;
   }
-  
+
   let { filteredInvestments = [], isLoading = false }: Props = $props();
 
   let displayedEntries = $state<AggregatedData[]>([]);
@@ -42,16 +42,16 @@
     if (!hasMore || isLoadingMore) return;
 
     isLoadingMore = true;
-    
+
     // Simulate loading delay for smooth UX
     setTimeout(() => {
       const sorted = [...filteredInvestments].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       const currentLength = displayedEntries.length;
       const nextBatch = sorted.slice(currentLength, currentLength + ITEMS_PER_PAGE);
-      
+
       displayedEntries = [...displayedEntries, ...nextBatch];
       hasMore = displayedEntries.length < sorted.length;
-      
+
       isLoadingMore = false;
     }, 100);
   }
@@ -68,9 +68,9 @@
       },
       {
         root: scrollContainer,
-        rootMargin: '50px',
-        threshold: 0.1
-      }
+        rootMargin: "50px",
+        threshold: 0.1,
+      },
     );
 
     observer.observe(sentinelElement);
@@ -91,40 +91,29 @@
 <div class="card">
   <div class="flex items-center justify-between mb-4">
     <h3 class="text-lg font-semibold text-gray-900">Recent Entries</h3>
-    <a href="/dashboard/add" class="text-primary-600 hover:text-primary-700 text-sm font-medium">
-      Add New Entry
-    </a>
+    <a href="/dashboard/add" class="text-primary-600 hover:text-primary-700 text-sm font-medium"> Add New Entry </a>
   </div>
-  
 
-  
   {#if displayedEntries.length === 0}
     <!-- Empty State -->
-    <div class="text-center py-8 text-gray-500">
-      No entries found for the selected filter
-    </div>
+    <div class="text-center py-8 text-gray-500">No entries found for the selected filter</div>
   {:else}
     <!-- Fixed height scrollable container -->
-    <div 
-      bind:this={scrollContainer}
-      class="h-96 overflow-y-auto overflow-x-auto border border-gray-200 rounded-lg"
-    >
+    <div bind:this={scrollContainer} class="h-96 overflow-y-auto overflow-x-auto border border-gray-200 rounded-lg">
       <table class="w-full">
         <thead class="bg-gray-50 sticky top-0">
           <tr class="border-b border-gray-200">
-            <th class="text-left py-3 px-4 font-medium text-gray-700">Date</th>
-            <th class="text-right py-3 px-4 font-medium text-gray-700">Value</th>
-            <th class="text-right py-3 px-4 font-medium text-gray-700">Change</th>
-            <th class="text-right py-3 px-4 font-medium text-gray-700">Change %</th>
-            <th class="text-center py-3 px-4 font-medium text-gray-700">Actions</th>
+            <th class="text-left py-3 px-4 font-medium text-gray-700 whitespace-nowrap">Date</th>
+            <th class="text-right py-3 px-4 font-medium text-gray-700 whitespace-nowrap">Value</th>
+            <th class="text-right py-3 px-4 font-medium text-gray-700 whitespace-nowrap">Change</th>
+            <th class="text-right py-3 px-4 font-medium text-gray-700 whitespace-nowrap">Change %</th>
+            <th class="text-center py-3 px-4 font-medium text-gray-700 whitespace-nowrap">Actions</th>
           </tr>
         </thead>
         <tbody>
           {#if displayedEntries.length === 0}
             <tr>
-              <td colspan="5" class="py-8 text-center text-gray-500">
-                No entries found for the selected filter
-              </td>
+              <td colspan="5" class="py-8 text-center text-gray-500"> No entries found for the selected filter </td>
             </tr>
           {:else}
             {#each displayedEntries as entry}
@@ -133,25 +122,27 @@
                 <td class="py-3 px-4 text-right font-medium text-gray-900">
                   {formatCurrency(entry.value)}
                 </td>
-                <td class="py-3 px-4 text-right font-medium {
-                  (entry.change ?? 0) >= 0 ? 'text-success-600' : 'text-danger-600'
-                }">
-                  {(entry.change ?? 0) !== 0 ? 
-                    (((entry.change ?? 0) >= 0 ? '+' : '') + formatCurrency(entry.change ?? 0)) : 
-                    '-'
-                  }
+                <td
+                  class="py-3 px-4 text-right font-medium {(entry.change ?? 0) >= 0
+                    ? 'text-success-600'
+                    : 'text-danger-600'}"
+                >
+                  {(entry.change ?? 0) !== 0
+                    ? ((entry.change ?? 0) >= 0 ? "+" : "") + formatCurrency(entry.change ?? 0)
+                    : "-"}
                 </td>
-                <td class="py-3 px-4 text-right font-medium {
-                  (entry.changePercent ?? 0) >= 0 ? 'text-success-600' : 'text-danger-600'
-                }">
-                  {(entry.changePercent ?? 0) !== 0 ? 
-                    (((entry.changePercent ?? 0) >= 0 ? '+' : '') + (entry.changePercent ?? 0).toFixed(2) + '%') : 
-                    '-'
-                  }
+                <td
+                  class="py-3 px-4 text-right font-medium {(entry.changePercent ?? 0) >= 0
+                    ? 'text-success-600'
+                    : 'text-danger-600'}"
+                >
+                  {(entry.changePercent ?? 0) !== 0
+                    ? ((entry.changePercent ?? 0) >= 0 ? "+" : "") + (entry.changePercent ?? 0).toFixed(2) + "%"
+                    : "-"}
                 </td>
                 <td class="py-3 px-4 text-center">
-                  <a 
-                    href="/dashboard/add?edit={entry.date}" 
+                  <a
+                    href="/dashboard/add?edit={entry.date}"
                     class="inline-flex items-center justify-center w-8 h-8 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
                     title="Edit entry"
                   >
@@ -174,14 +165,13 @@
             </div>
           {:else if !hasMore}
             <div class="text-center text-sm text-gray-500">
-              {filteredInvestments.length === displayedEntries.length ? 
-                `Showing all ${filteredInvestments.length} entries` :
-                `You've reached the end of the filtered results (${displayedEntries.length} of ${filteredInvestments.length} entries)`
-              }
+              {filteredInvestments.length === displayedEntries.length
+                ? `Showing all ${filteredInvestments.length} entries`
+                : `You've reached the end of the filtered results (${displayedEntries.length} of ${filteredInvestments.length} entries)`}
             </div>
           {/if}
         </div>
       {/if}
     </div>
   {/if}
-</div> 
+</div>
