@@ -156,33 +156,33 @@
 <!-- Import Dialog -->
 {#if showImportDialog}
   <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+    <div class="bg-background-primary rounded-lg p-6 max-w-md w-full mx-4 border border-border-primary shadow-xl dark:shadow-none dark:ring-1 dark:ring-white/10 dark:bg-gradient-to-br dark:from-slate-800/50 dark:to-slate-900/50">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-semibold text-gray-900">Import CSV File</h3>
-        <button onclick={closeImportDialog} class="text-gray-400 hover:text-gray-600">
+        <h3 class="text-lg font-semibold text-foreground-primary">Import CSV File</h3>
+        <button onclick={closeImportDialog} class="text-foreground-tertiary hover:text-foreground-secondary">
           <X class="w-6 h-6" />
         </button>
       </div>
 
       <div class="mb-4">
-        <p class="text-sm text-gray-600 mb-3">
+        <p class="text-sm text-foreground-secondary mb-3">
           Upload a CSV file with investment data. The file should have two columns: Date (YYYY-MM-DD) and Value.
           {#if selectedPortfolio}
             <br /><strong>Importing to:</strong> {selectedPortfolio.name}
           {/if}
         </p>
 
-        <div class="bg-gray-50 rounded-md p-3 mb-3">
-          <p class="text-xs text-gray-500 mb-1">Example format:</p>
-          <code class="text-xs text-gray-700">
+        <div class="bg-background-secondary rounded-md p-3 mb-3">
+          <p class="text-xs text-foreground-tertiary mb-1">Example format:</p>
+          <code class="text-xs text-foreground-secondary">
             Date,Value<br />
             2024-01-01,254000<br />
             2024-01-02,255500
           </code>
         </div>
 
-        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-          <FileText class="w-8 h-8 text-gray-400 mx-auto mb-2" />
+        <div class="border-2 border-dashed border-border-secondary rounded-lg p-6 text-center">
+          <FileText class="w-8 h-8 text-foreground-tertiary mx-auto mb-2" />
           <input
             bind:this={fileInput}
             type="file"
@@ -192,10 +192,13 @@
             class="hidden"
             id="csv-file-input"
           />
-          <label for="csv-file-input" class="cursor-pointer text-blue-600 hover:text-blue-800 font-medium">
+          <label
+            for="csv-file-input"
+            class="cursor-pointer text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+          >
             {isImporting ? "Processing..." : "Choose CSV file"}
           </label>
-          <p class="text-xs text-gray-500 mt-1">Maximum file size: 5MB</p>
+          <p class="text-xs text-foreground-tertiary mt-1">Maximum file size: 5MB</p>
         </div>
       </div>
 
@@ -203,20 +206,24 @@
       {#if importResult}
         <div class="mb-4">
           {#if importResult.success}
-            <div class="bg-green-50 border border-green-200 rounded-md p-3">
+            <div
+              class="bg-success-50 border border-success-200 rounded-md p-3 dark:bg-success-900/20 dark:border-success-800"
+            >
               <div class="flex items-center">
-                <CheckCircle class="w-5 h-5 text-green-600 mr-2" />
-                <p class="text-sm text-green-800">{importResult.message}</p>
+                <CheckCircle class="w-5 h-5 text-success-600 dark:text-success-400 mr-2" />
+                <p class="text-sm text-success-800 dark:text-success-300">{importResult.message}</p>
               </div>
             </div>
           {:else}
-            <div class="bg-red-50 border border-red-200 rounded-md p-3">
+            <div
+              class="bg-danger-50 border border-danger-200 rounded-md p-3 dark:bg-danger-900/20 dark:border-danger-800"
+            >
               <div class="flex items-start">
-                <AlertCircle class="w-5 h-5 text-red-600 mr-2 mt-0.5 flex-shrink-0" />
+                <AlertCircle class="w-5 h-5 text-danger-600 dark:text-danger-400 mr-2 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p class="text-sm text-red-800 mb-1">{importResult.message}</p>
+                  <p class="text-sm text-danger-800 dark:text-danger-300 mb-1">{importResult.message}</p>
                   {#if importResult.errors && importResult.errors.length > 0}
-                    <div class="text-xs text-red-700">
+                    <div class="text-xs text-danger-700 dark:text-danger-400">
                       <p class="font-medium mb-1">Errors:</p>
                       <ul class="list-disc list-inside space-y-1 max-h-32 overflow-y-auto">
                         {#each importResult.errors as error}

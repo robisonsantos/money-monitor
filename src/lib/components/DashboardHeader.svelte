@@ -120,6 +120,8 @@
   }
 </script>
 
+
+
 <svelte:window on:click={handleClickOutside} />
 
 <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 lg:gap-6">
@@ -129,28 +131,28 @@
       <!-- Portfolio Name as Main Title with Dropdown -->
       {#if isLoading}
         <div class="animate-pulse">
-          <div class="h-8 lg:h-10 bg-gray-200 rounded w-64"></div>
+          <div class="h-8 lg:h-10 bg-background-tertiary rounded w-64"></div>
         </div>
       {:else if selectedPortfolio}
         <button
           onclick={() => !disabled && (isDropdownOpen = !isDropdownOpen)}
-          class="group flex items-center gap-3 px-4 py-3 text-2xl lg:text-3xl font-bold text-gray-900 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-all duration-200 {disabled
+          class="group flex items-center gap-3 px-4 py-3 text-2xl lg:text-3xl font-bold text-foreground-primary hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200 {disabled
             ? 'opacity-50 cursor-not-allowed'
-            : 'cursor-pointer'}"
-          class:bg-blue-50={isDropdownOpen}
-          class:text-blue-700={isDropdownOpen}
+            : 'cursor-pointer'} {isDropdownOpen ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : ''}"
           {disabled}
         >
-          <Folder class="w-6 h-6 lg:w-7 lg:h-7 text-blue-600 flex-shrink-0" />
+          <Folder class="w-6 h-6 lg:w-7 lg:h-7 text-blue-600 dark:text-blue-400 flex-shrink-0" />
           <span class="truncate max-w-[250px] sm:max-w-[400px] lg:max-w-[500px]">{selectedPortfolio.name}</span>
           <ChevronDown
-            class="w-5 h-5 text-blue-500 transition-transform duration-200 {isDropdownOpen ? 'rotate-180' : ''}"
+            class="w-5 h-5 text-blue-500 dark:text-blue-400 transition-transform duration-200 {isDropdownOpen
+              ? 'rotate-180'
+              : ''}"
           />
         </button>
       {:else}
         <button
           onclick={() => !disabled && (isDropdownOpen = !isDropdownOpen)}
-          class="flex items-center gap-3 px-4 py-3 text-2xl lg:text-3xl font-bold text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-all duration-200 {disabled
+          class="flex items-center gap-3 px-4 py-3 text-2xl lg:text-3xl font-bold text-foreground-tertiary hover:text-foreground-secondary hover:bg-background-secondary rounded-lg transition-all duration-200 {disabled
             ? 'opacity-50 cursor-not-allowed'
             : 'cursor-pointer'}"
           {disabled}
@@ -163,7 +165,7 @@
     </div>
 
     <!-- Portfolio Description -->
-    <p class="text-gray-600 mt-2 ml-0">
+    <p class="text-foreground-secondary mt-2 ml-0">
       {#if selectedPortfolio}
         Investment Dashboard - Track your portfolio performance over time
       {:else}
@@ -174,13 +176,13 @@
     <!-- Dropdown Menu -->
     {#if isDropdownOpen}
       <div
-        class="absolute z-50 w-full min-w-[300px] mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-80 overflow-y-auto"
+        class="absolute z-50 w-full min-w-[300px] mt-2 bg-background-primary border border-border-primary rounded-xl shadow-lg dark:shadow-none dark:ring-1 dark:ring-white/10 dark:bg-gradient-to-br dark:from-slate-800/50 dark:to-slate-900/50 max-h-80 overflow-y-auto"
         style="top: 100%;"
       >
         <div class="py-2">
           <!-- Header -->
-          <div class="px-4 py-2 border-b border-gray-100">
-            <h3 class="text-sm font-semibold text-gray-900 flex items-center gap-2">
+          <div class="px-4 py-2 border-b border-border-secondary">
+            <h3 class="text-sm font-semibold text-foreground-primary flex items-center gap-2">
               <Settings class="w-4 h-4" />
               Portfolio Management
             </h3>
@@ -199,23 +201,22 @@
                       bind:value={renameValue}
                       onkeydown={(e) => handleKeydown(e, "rename")}
                       onblur={saveRename}
-                      class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      class="w-full px-3 py-2 text-sm border border-border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-background-primary text-foreground-primary"
                       placeholder="Portfolio name"
                     />
                   </div>
                 {:else}
                   <!-- Portfolio item -->
-                  <div class="flex items-center hover:bg-gray-50">
+                  <div class="flex items-center {selectedPortfolio?.id === portfolio.id ? '' : 'hover:bg-background-secondary'}">
                     <button
                       onclick={() => selectPortfolio(portfolio)}
-                      class="flex-1 flex items-center px-4 py-3 text-sm text-gray-700 cursor-pointer"
-                      class:bg-blue-50={selectedPortfolio?.id === portfolio.id}
-                      class:text-blue-700={selectedPortfolio?.id === portfolio.id}
+                      class="flex-1 flex items-center px-4 py-3 text-sm cursor-pointer portfolio-item {selectedPortfolio?.id === portfolio.id ? 'selected' : ''}"
+                      class:text-foreground-secondary={selectedPortfolio?.id !== portfolio.id}
                     >
                       <Folder
                         class="w-4 h-4 mr-3 {selectedPortfolio?.id === portfolio.id
                           ? 'text-blue-500'
-                          : 'text-gray-400'}"
+                          : 'text-foreground-tertiary'}"
                       />
                       <span class="truncate font-medium">{portfolio.name}</span>
                       {#if selectedPortfolio?.id === portfolio.id}
@@ -230,7 +231,7 @@
                           e.stopPropagation();
                           startRenaming(portfolio);
                         }}
-                        class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                        class="p-2 text-foreground-tertiary hover:text-foreground-secondary hover:bg-background-tertiary rounded-lg transition-colors"
                         title="Rename portfolio"
                       >
                         <Edit3 class="w-4 h-4" />
@@ -241,7 +242,7 @@
                             e.stopPropagation();
                             deletePortfolio(portfolio);
                           }}
-                          class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          class="p-2 text-foreground-tertiary hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                           title="Delete portfolio"
                         >
                           <Trash2 class="w-4 h-4" />
@@ -255,9 +256,9 @@
           </div>
 
           <!-- Create new portfolio -->
-          <div class="border-t border-gray-100 mt-2">
+          <div class="border-t border-border-secondary mt-2">
             {#if isCreating}
-              <div class="px-4 py-3 bg-gray-50">
+              <div class="px-4 py-3 bg-background-secondary">
                 <div class="space-y-3">
                   <input
                     id="new-portfolio-input"
@@ -267,7 +268,7 @@
                     onclick={(e) => e.stopPropagation()}
                     onmousedown={(e) => e.stopPropagation()}
                     onfocus={(e) => e.stopPropagation()}
-                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    class="w-full px-3 py-2 text-sm border border-border-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-background-primary text-foreground-primary"
                     placeholder="Enter portfolio name"
                   />
                   <div class="flex space-x-2">
@@ -289,7 +290,7 @@
                         isCreating = false;
                         newPortfolioName = "";
                       }}
-                      class="flex-1 px-3 py-2 text-sm bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+                      class="flex-1 px-3 py-2 text-sm bg-background-tertiary text-foreground-secondary rounded-lg hover:bg-border-primary transition-colors"
                     >
                       Cancel
                     </button>
@@ -303,7 +304,7 @@
                   e.stopPropagation();
                   startCreating();
                 }}
-                class="w-full flex items-center px-4 py-3 text-sm text-blue-600 hover:bg-blue-50 cursor-pointer transition-colors"
+                class="w-full flex items-center px-4 py-3 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer transition-colors"
               >
                 <Plus class="w-4 h-4 mr-3" />
                 <span class="font-medium">Create New Portfolio</span>
@@ -320,5 +321,28 @@
   /* Ensure dropdown appears above other elements */
   .relative {
     z-index: 20;
+  }
+
+  /* Direct CSS for selected portfolio items */
+  button.portfolio-item.selected {
+    background-color: rgb(239, 246, 255) !important; /* Light blue for light mode */
+    color: rgb(29, 78, 216) !important; /* Dark blue text for light mode */
+  }
+
+  /* Dark mode override with higher specificity */
+  :global(.dark) button.portfolio-item.selected {
+    background-color: rgb(51, 65, 85) !important; /* Dark gray for dark mode */
+    color: rgb(147, 197, 253) !important; /* Light blue text for dark mode */
+  }
+
+  /* Ensure hover maintains selected colors */
+  button.portfolio-item.selected:hover {
+    background-color: rgb(239, 246, 255) !important;
+    color: rgb(29, 78, 216) !important;
+  }
+
+  :global(.dark) button.portfolio-item.selected:hover {
+    background-color: rgb(51, 65, 85) !important;
+    color: rgb(147, 197, 253) !important;
   }
 </style>

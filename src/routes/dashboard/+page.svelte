@@ -142,14 +142,9 @@
   }
 
   async function handlePortfolioCreate(event: CustomEvent<{ name: string }>) {
-    console.log("handlePortfolioCreate called with:", event.detail);
     const result = await portfolioStore.createPortfolio(event.detail.name);
-    console.log("Portfolio creation result:", result);
     if (!result) {
       // Error is handled by the store, but we could show a toast here
-      console.error("Failed to create portfolio");
-    } else {
-      console.log("Portfolio created successfully:", result);
     }
   }
 
@@ -213,7 +208,7 @@
         <!-- Filter Controls -->
         <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
           <div class="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
-            <label for="period" class="text-sm font-medium text-gray-700 whitespace-nowrap">View:</label>
+            <label for="period" class="text-sm font-medium text-foreground-secondary whitespace-nowrap">View:</label>
             <select id="period" bind:value={selectedPeriod} class="input w-full sm:w-auto sm:min-w-[120px]">
               {#each periodOptions as option}
                 <option value={option.value}>{option.label}</option>
@@ -222,7 +217,7 @@
           </div>
 
           <div class="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
-            <label for="filter" class="text-sm font-medium text-gray-700 whitespace-nowrap">Period:</label>
+            <label for="filter" class="text-sm font-medium text-foreground-secondary whitespace-nowrap">Period:</label>
             <select id="filter" bind:value={selectedFilter} class="input w-full sm:w-auto sm:min-w-[140px]">
               {#each FILTER_OPTIONS[selectedPeriod] as option}
                 <option value={option.value}>{option.label}</option>
@@ -250,9 +245,9 @@
       {#each Array(4) as _, i}
         <div class="card">
           <div class="animate-pulse">
-            <div class="h-4 bg-gray-200 rounded w-3/4 mb-3"></div>
-            <div class="h-8 bg-gray-200 rounded w-1/2 mb-2"></div>
-            <div class="h-3 bg-gray-200 rounded w-1/3"></div>
+            <div class="h-4 bg-background-tertiary rounded w-3/4 mb-3"></div>
+            <div class="h-8 bg-background-tertiary rounded w-1/2 mb-2"></div>
+            <div class="h-3 bg-background-tertiary rounded w-1/3"></div>
           </div>
         </div>
       {/each}
@@ -261,23 +256,23 @@
     <!-- Chart Skeleton -->
     <div class="card">
       <div class="animate-pulse">
-        <div class="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
-        <div class="h-96 bg-gray-100 rounded"></div>
+        <div class="h-6 bg-background-tertiary rounded w-1/3 mb-4"></div>
+        <div class="h-96 bg-background-secondary rounded"></div>
       </div>
     </div>
 
     <!-- Recent Entries Skeleton -->
     <div class="card">
       <div class="animate-pulse">
-        <div class="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
+        <div class="h-6 bg-background-tertiary rounded w-1/4 mb-4"></div>
         <div class="space-y-3">
           {#each Array(10) as _, i}
             <div class="flex justify-between items-center py-2">
-              <div class="h-4 bg-gray-200 rounded w-1/6"></div>
-              <div class="h-4 bg-gray-200 rounded w-1/8"></div>
-              <div class="h-4 bg-gray-200 rounded w-1/8"></div>
-              <div class="h-4 bg-gray-200 rounded w-1/8"></div>
-              <div class="h-4 bg-gray-200 rounded w-1/12"></div>
+              <div class="h-4 bg-background-tertiary rounded w-1/6"></div>
+              <div class="h-4 bg-background-tertiary rounded w-1/8"></div>
+              <div class="h-4 bg-background-tertiary rounded w-1/8"></div>
+              <div class="h-4 bg-background-tertiary rounded w-1/8"></div>
+              <div class="h-4 bg-background-tertiary rounded w-1/12"></div>
             </div>
           {/each}
         </div>
@@ -286,16 +281,16 @@
   {:else if displayInvestments.length === 0}
     <!-- Empty State -->
     <div class="text-center py-12">
-      <BarChart3 class="w-16 h-16 text-gray-400 mx-auto mb-4" />
-      <h2 class="text-xl font-semibold text-gray-900 mb-2">No investment data yet</h2>
-      <p class="text-gray-600 mb-6">
+      <BarChart3 class="w-16 h-16 text-foreground-tertiary mx-auto mb-4" />
+      <h2 class="text-xl font-semibold text-foreground-primary mb-2">No investment data yet</h2>
+      <p class="text-foreground-secondary mb-6">
         Start tracking your investments by adding your first entry or importing from a CSV file.
       </p>
 
       <!-- Action Buttons -->
       <div class="flex flex-col sm:flex-row gap-4 justify-center items-center w-full max-w-sm mx-auto sm:max-w-none">
         <a href="/dashboard/add" class="btn-primary w-full sm:w-auto">Add First Entry</a>
-        <span class="text-gray-400 hidden sm:block">or</span>
+        <span class="text-foreground-tertiary hidden sm:block">or</span>
         <div class="w-full sm:w-auto">
           <CSVManager
             selectedPeriod="daily"

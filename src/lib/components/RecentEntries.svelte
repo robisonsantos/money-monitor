@@ -90,36 +90,46 @@
 
 <div class="card">
   <div class="flex items-center justify-between mb-4">
-    <h3 class="text-lg font-semibold text-gray-900">Recent Entries</h3>
-    <a href="/dashboard/add" class="text-primary-600 hover:text-primary-700 text-sm font-medium"> Add New Entry </a>
+    <h3 class="text-lg font-semibold text-foreground-primary">Recent Entries</h3>
+    <a
+      href="/dashboard/add"
+      class="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 text-sm font-medium"
+    >
+      Add New Entry
+    </a>
   </div>
 
   {#if displayedEntries.length === 0}
     <!-- Empty State -->
-    <div class="text-center py-8 text-gray-500">No entries found for the selected filter</div>
+    <div class="text-center py-8 text-foreground-tertiary">No entries found for the selected filter</div>
   {:else}
     <!-- Fixed height scrollable container -->
-    <div bind:this={scrollContainer} class="h-96 overflow-y-auto overflow-x-auto border border-gray-200 rounded-lg">
+    <div
+      bind:this={scrollContainer}
+      class="h-96 overflow-y-auto overflow-x-auto border border-border-primary rounded-lg"
+    >
       <table class="w-full">
-        <thead class="bg-gray-50 sticky top-0">
-          <tr class="border-b border-gray-200">
-            <th class="text-left py-3 px-4 font-medium text-gray-700 whitespace-nowrap">Date</th>
-            <th class="text-right py-3 px-4 font-medium text-gray-700 whitespace-nowrap">Value</th>
-            <th class="text-right py-3 px-4 font-medium text-gray-700 whitespace-nowrap">Change</th>
-            <th class="text-right py-3 px-4 font-medium text-gray-700 whitespace-nowrap">Change %</th>
-            <th class="text-center py-3 px-4 font-medium text-gray-700 whitespace-nowrap">Actions</th>
+        <thead class="bg-background-secondary sticky top-0">
+          <tr class="border-b border-border-primary">
+            <th class="text-left py-3 px-4 font-medium text-foreground-secondary whitespace-nowrap">Date</th>
+            <th class="text-right py-3 px-4 font-medium text-foreground-secondary whitespace-nowrap">Value</th>
+            <th class="text-right py-3 px-4 font-medium text-foreground-secondary whitespace-nowrap">Change</th>
+            <th class="text-right py-3 px-4 font-medium text-foreground-secondary whitespace-nowrap">Change %</th>
+            <th class="text-center py-3 px-4 font-medium text-foreground-secondary whitespace-nowrap">Actions</th>
           </tr>
         </thead>
         <tbody>
           {#if displayedEntries.length === 0}
             <tr>
-              <td colspan="5" class="py-8 text-center text-gray-500"> No entries found for the selected filter </td>
+              <td colspan="5" class="py-8 text-center text-foreground-tertiary">
+                No entries found for the selected filter
+              </td>
             </tr>
           {:else}
             {#each displayedEntries as entry}
-              <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                <td class="py-3 px-4 text-gray-900">{formatDate(entry.date)}</td>
-                <td class="py-3 px-4 text-right font-medium text-gray-900">
+              <tr class="border-b border-border-secondary hover:bg-background-secondary transition-colors">
+                <td class="py-3 px-4 text-foreground-primary">{formatDate(entry.date)}</td>
+                <td class="py-3 px-4 text-right font-medium text-foreground-primary">
                   {formatCurrency(entry.value)}
                 </td>
                 <td
@@ -143,7 +153,7 @@
                 <td class="py-3 px-4 text-center">
                   <a
                     href="/dashboard/add?edit={entry.date}"
-                    class="inline-flex items-center justify-center w-8 h-8 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                    class="inline-flex items-center justify-center w-8 h-8 text-foreground-tertiary hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
                     title="Edit entry"
                   >
                     <Edit3 class="w-4 h-4" />
@@ -157,14 +167,14 @@
 
       <!-- Infinite scroll sentinel and loading indicator inside the scroll container -->
       {#if displayedEntries.length > 0}
-        <div bind:this={sentinelElement} class="py-4 bg-white">
+        <div bind:this={sentinelElement} class="py-4 bg-background-primary">
           {#if isLoadingMore}
             <div class="flex items-center justify-center space-x-2">
               <Loader class="w-4 h-4 animate-spin text-primary-600" />
-              <span class="text-sm text-gray-600">Loading more entries...</span>
+              <span class="text-sm text-foreground-secondary">Loading more entries...</span>
             </div>
           {:else if !hasMore}
-            <div class="text-center text-sm text-gray-500">
+            <div class="text-center text-sm text-foreground-tertiary">
               {filteredInvestments.length === displayedEntries.length
                 ? `Showing all ${filteredInvestments.length} entries`
                 : `You've reached the end of the filtered results (${displayedEntries.length} of ${filteredInvestments.length} entries)`}

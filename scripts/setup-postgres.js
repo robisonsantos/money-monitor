@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+ mport { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import pg from 'pg';
@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Handle PostgreSQL connection configuration
-const DB_CONFIG = process.env.DATABASE_URL 
+const DB_CONFIG = process.env.DATABASE_URL
   ? { connectionString: process.env.DATABASE_URL }
   : {
       host: process.env.DB_HOST || 'localhost',
@@ -29,7 +29,7 @@ async function setupDatabase() {
   console.log('Database config:', { ...DB_CONFIG, password: '[HIDDEN]' });
 
   const client = new Client(DB_CONFIG);
-  
+
   try {
     await client.connect();
     console.log('Connected to PostgreSQL successfully');
@@ -45,17 +45,17 @@ async function setupDatabase() {
     // Create default dev user ONLY in explicit development mode
     if (process.env.NODE_ENV === 'development') {
       console.log('Creating default development user...');
-      
+
       const bcrypt = await import('bcrypt');
       const defaultPassword = await bcrypt.hash('123456', 10);
-      
+
       try {
         await client.query(`
-          INSERT INTO users (email, password_hash, name) 
+          INSERT INTO users (email, password_hash, name)
           VALUES ($1, $2, $3)
           ON CONFLICT (email) DO NOTHING
         `, ['admin@moneymonitor.com', defaultPassword, 'Admin User']);
-        
+
         console.log('Default user created: admin@moneymonitor.com / 123456');
       } catch (error) {
         console.log('Default user already exists or error creating:', error.message);
@@ -63,7 +63,7 @@ async function setupDatabase() {
     }
 
     console.log('Database setup completed successfully!');
-    
+
   } catch (error) {
     console.error('Error setting up database:', error);
     process.exit(1);
@@ -76,4 +76,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   setupDatabase();
 }
 
-export { setupDatabase }; 
+export { setupDatabase };

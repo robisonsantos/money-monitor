@@ -262,34 +262,34 @@
 </svelte:head>
 
 <!-- Enhanced layout with better spacing and background -->
-<div class="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 -mx-4 -my-6 px-4 py-8 sm:px-6 sm:py-12">
+<div
+  class="min-h-screen bg-gradient-to-br from-background-secondary via-background-primary to-blue-50 dark:to-blue-900/20 -mx-4 -my-6 px-4 py-8 sm:px-6 sm:py-12"
+>
   <div class="max-w-2xl mx-auto">
     <!-- Enhanced header section -->
     <div class="text-center mb-10">
-      <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
+      <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-100 dark:bg-blue-900/20 rounded-full mb-4">
         {#if isEditMode}
-          <Edit3 class="w-8 h-8 text-blue-600" />
+          <Edit3 class="w-8 h-8 text-blue-600 dark:text-blue-400" />
         {:else}
-          <Plus class="w-8 h-8 text-blue-600" />
+          <Plus class="w-8 h-8 text-blue-600 dark:text-blue-400" />
         {/if}
       </div>
-      <h1 class="text-4xl font-bold text-gray-900 mb-3">
+      <h1 class="text-4xl font-bold text-foreground-primary mb-3">
         {isEditMode ? "Edit Investment Entry" : "Add Investment Entry"}
       </h1>
-      <p class="text-lg text-gray-600 max-w-md mx-auto">
-        {isEditMode ? "Update your portfolio value for this date" : "Record your portfolio value for a specific date"}
-      </p>
+      <p class="text-lg text-foreground-secondary max-w-md mx-auto">Record your portfolio value for a specific date</p>
     </div>
 
     <!-- Enhanced main form card -->
-    <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden mb-8">
+    <div class="bg-background-primary rounded-2xl shadow-xl dark:shadow-none dark:ring-1 dark:ring-white/10 dark:bg-gradient-to-br dark:from-slate-800/50 dark:to-slate-900/50 border border-border-primary overflow-hidden mb-8">
       <!-- Form content with enhanced padding -->
       <div class="p-8 sm:p-10">
         {#if isEditMode}
-          <div class="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8">
+          <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6 mb-8">
             <div class="flex items-center">
-              <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
-                <Edit3 class="w-5 h-5 text-blue-600" />
+              <div class="w-10 h-10 bg-blue-100 dark:bg-blue-800/30 rounded-lg flex items-center justify-center mr-4">
+                <Edit3 class="w-5 h-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
                 <p class="text-blue-900 font-semibold text-lg">Editing existing entry for {formatDate(date)}</p>
@@ -342,13 +342,13 @@
         >
           <!-- Portfolio Selection -->
           <div>
-            <label class="block text-sm font-semibold text-gray-800 mb-3">
+            <label class="block text-sm font-semibold text-foreground-primary mb-3">
               <Folder class="w-4 h-4 inline mr-1" />
               Portfolio
             </label>
             {#if $portfolioIsLoading}
               <div class="animate-pulse">
-                <div class="h-12 bg-gray-200 rounded-xl"></div>
+                <div class="h-12 bg-background-tertiary rounded-xl"></div>
               </div>
             {:else if $portfolios.length > 0}
               <PortfolioSelector
@@ -366,42 +366,44 @@
                 on:delete={(e) => portfolioStore.deletePortfolio(e.detail)}
               />
               {#if $portfolioError}
-                <p class="text-sm text-red-600 mt-2">
+                <p class="text-sm text-danger-600 dark:text-danger-400 mt-2">
                   <AlertCircle class="w-4 h-4 inline mr-1" />
                   {$portfolioError}
                 </p>
               {/if}
             {:else}
-              <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-                <p class="text-yellow-800 text-sm">
+              <div
+                class="bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-800 rounded-xl p-4"
+              >
+                <p class="text-warning-800 dark:text-warning-300 text-sm">
                   <AlertCircle class="w-4 h-4 inline mr-1" />
-                  No portfolios found. A "Main Portfolio" will be created automatically.
+                  No portfolios found. Create a portfolio first to add investments.
                 </p>
               </div>
             {/if}
-            <p class="text-sm text-gray-500 mt-3">Select the portfolio to add this investment entry to</p>
+            <p class="text-sm text-foreground-tertiary mt-3">Select the portfolio to add this investment entry to</p>
           </div>
 
           <div>
-            <label for="date" class="block text-sm font-semibold text-gray-800 mb-3"> Date </label>
+            <label for="date" class="block text-sm font-semibold text-foreground-primary mb-3">Date</label>
             <input
               id="date"
               type="date"
               bind:value={date}
-              class="w-full px-4 py-4 text-lg border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all {isEditMode
-                ? 'bg-gray-50 cursor-not-allowed text-gray-600'
-                : 'bg-white'}"
+              class="w-full px-4 py-4 text-lg border border-border-primary rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-background-primary text-foreground-primary {isEditMode
+                ? 'bg-background-secondary cursor-not-allowed text-foreground-tertiary'
+                : ''}"
               required
               disabled={isLoading || isEditMode}
               readonly={isEditMode}
             />
             {#if dateWarning}
-              <p class="text-sm text-amber-600 mt-3 font-medium flex items-center">
+              <p class="text-sm text-warning-600 dark:text-warning-400 mt-3 font-medium flex items-center">
                 <AlertCircle class="w-4 h-4 mr-2" />
                 {dateWarning}
               </p>
             {/if}
-            <p class="text-sm text-gray-500 mt-3">
+            <p class="text-sm text-foreground-tertiary mt-3">
               {isEditMode
                 ? "Date cannot be changed when editing an existing entry"
                 : "Select the date for this investment value"}
@@ -409,10 +411,12 @@
           </div>
 
           <div>
-            <label for="value" class="block text-sm font-semibold text-gray-800 mb-3"> Portfolio Value ($) </label>
+            <label for="value" class="block text-sm font-semibold text-foreground-primary mb-3">
+              Portfolio Value ($)
+            </label>
             <div class="relative">
               <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <span class="text-gray-500 text-lg font-medium">$</span>
+                <span class="text-foreground-tertiary text-lg font-medium">$</span>
               </div>
               <input
                 id="value"
@@ -420,18 +424,18 @@
                 step="0.01"
                 min="0"
                 bind:value
-                class="w-full pl-8 pr-4 py-4 text-lg border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white"
-                placeholder={isLoading && isEditMode ? "Loading..." : "0.00"}
+                class="w-full pl-10 pr-4 py-4 text-lg border border-border-primary rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-background-primary text-foreground-primary"
+                placeholder="0.00"
                 required
                 disabled={isLoading}
                 onkeydown={handleKeydown}
               />
             </div>
-            <p class="text-sm text-gray-500 mt-3">Enter the total value of your investment portfolio</p>
+            <p class="text-sm text-foreground-tertiary mt-3">Enter the total value of your investment portfolio</p>
           </div>
 
           {#if !isEditMode && isFriday()}
-            <div class="bg-blue-50 border border-blue-200 rounded-xl p-6">
+            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6">
               <div class="flex items-start">
                 <div class="flex items-center h-5 mr-4 mt-0.5">
                   <input
@@ -443,18 +447,25 @@
                   />
                 </div>
                 <div class="flex-1">
-                  <label for="carryOverWeekend" class="block text-sm font-medium text-blue-900 mb-2 cursor-pointer">
+                  <label
+                    for="carryOverWeekend"
+                    class="block text-sm font-medium text-blue-900 dark:text-blue-100 mb-2 cursor-pointer"
+                  >
                     <Calendar class="w-4 h-4 inline mr-2" />
                     Copy this value to weekend days
                   </label>
-                  <p class="text-sm text-blue-700 mb-3">
+                  <p class="text-sm text-blue-700 dark:text-blue-200 mb-3">
                     Since markets are closed on weekends, this will also save the same value for:
                   </p>
                   <div class="flex flex-col sm:flex-row gap-2 text-sm">
-                    <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-lg font-medium">
+                    <span
+                      class="bg-blue-100 dark:bg-blue-800/30 text-blue-800 dark:text-blue-200 px-3 py-1 rounded-lg font-medium"
+                    >
                       📅 Saturday: {formatDate(weekendDates().saturday)}
                     </span>
-                    <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-lg font-medium">
+                    <span
+                      class="bg-blue-100 dark:bg-blue-800/30 text-blue-800 dark:text-blue-200 px-3 py-1 rounded-lg font-medium"
+                    >
                       📅 Sunday: {formatDate(weekendDates().sunday)}
                     </span>
                   </div>
@@ -490,10 +501,12 @@
           </div>
 
           {#if !isEditMode && dateWarning}
-            <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-6">
-              <p class="text-sm text-amber-800 flex items-center">
+            <div
+              class="bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-800 rounded-xl p-4 mt-6"
+            >
+              <p class="text-sm text-warning-800 dark:text-warning-300 flex items-center">
                 <AlertCircle class="w-4 h-4 mr-2 flex-shrink-0" />
-                Please select a different date or use the edit functionality to update the existing entry.
+                Entry for this date already exists and will be updated
               </p>
             </div>
           {/if}
@@ -502,12 +515,12 @@
     </div>
 
     <!-- Enhanced Quick Tips -->
-    <div class="bg-blue-50 border border-blue-200 rounded-xl p-6">
+    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6 dark:bg-gradient-to-br dark:from-slate-800/40 dark:to-slate-900/40 dark:ring-1 dark:ring-white/10">
       <div class="flex items-start">
-        <div class="w-6 h-6 text-blue-600 mr-3 mt-0.5">💡</div>
+        <div class="w-6 h-6 text-blue-600 dark:text-blue-400 mr-3 mt-0.5">💡</div>
         <div>
-          <h3 class="text-sm font-medium text-blue-900 mb-2">Tips for accurate tracking:</h3>
-          <ul class="text-sm text-blue-800 space-y-1">
+          <h3 class="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">Tips for accurate tracking:</h3>
+          <ul class="text-sm text-blue-800 dark:text-blue-200 space-y-1">
             <li>• Record values at market close for consistency</li>
             <li>• Include all investment accounts in your total</li>
             <li>• Update regularly for better trend analysis</li>
