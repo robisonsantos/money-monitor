@@ -215,30 +215,12 @@ CREATE TABLE IF NOT EXISTS new_feature (
 );
 ```
 
-2. **Add to migration list**:
-```javascript
-// scripts/migrate-production.js
-const MIGRATIONS = [
-  // ... existing migrations
-  {
-    id: 'new_feature',
-    name: 'New Feature Migration',
-    file: './scripts/new-feature.sql',
-    checkQuery: `
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables
-        WHERE table_schema = 'public'
-        AND table_name = 'new_feature'
-      );
-    `
-  }
-];
+2. **Deploy**:
+```bash
+git push origin main  # Schema changes are handled automatically by the application
 ```
 
-3. **Deploy**:
-```bash
-git push origin main  # Migration runs automatically
-```
+**Note**: The application now uses automatic schema bootstrap instead of explicit migrations. Database schema is created automatically when the application starts.
 
 ---
 
@@ -309,9 +291,9 @@ SET portfolio_id = (
 WHERE portfolio_id IS NULL;
 ```
 
-### Manual Migration Recovery
+### Manual Database Setup
 
-If automated migrations fail, you can run them manually:
+If you need to manually verify or setup the database:
 
 ```bash
 # 1. Connect to your production database
@@ -319,14 +301,15 @@ psql $DATABASE_URL
 
 # 2. Check current state
 \dt  -- List tables
-SELECT * FROM schema_migrations ORDER BY executed_at;
 
-# 3. Apply specific migration
-\i scripts/migrate-portfolios.sql
+# 3. If tables are missing, restart the application
+# The application will automatically create the schema on startup
 
-# 4. Trigger new deployment
-git commit --allow-empty -m "Trigger rebuild after manual migration"
-git push origin main
+# 4. Verify schema is correct
+\d users
+\d investments
+\d portfolios
+\d sessions
 ```
 
 ### Rollback Strategy

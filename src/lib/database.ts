@@ -135,17 +135,17 @@ async function setupPostgreSQLSchema() {
     const tablesQuery = `
       SELECT table_name
       FROM information_schema.tables
-      WHERE table_schema = 'public' AND table_name IN ('users', 'investments')
+      WHERE table_schema = 'public' AND table_name IN ('users', 'portfolios', 'investments')
     `;
     const result = await client.query(tablesQuery);
     const existingTables = result.rows.map((row) => row.table_name);
 
-    if (existingTables.length >= 2) {
+    if (existingTables.length >= 3) {
       // Tables already exist, no need to set up schema
       return;
     }
 
-    if (!existingTables.includes("users") || !existingTables.includes("investments")) {
+    if (!existingTables.includes("users") || !existingTables.includes("portfolios") || !existingTables.includes("investments")) {
       if (dev) console.log("Setting up PostgreSQL schema...");
 
       // Create users table
@@ -160,11 +160,24 @@ async function setupPostgreSQLSchema() {
         )
       `);
 
+      // Create portfolios table
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS portfolios (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          name VARCHAR(255) NOT NULL,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT unique_portfolio_name_per_user UNIQUE (user_id, name)
+        )
+      `);
+
       // Create investments table
       await client.query(`
         CREATE TABLE IF NOT EXISTS investments (
           id SERIAL PRIMARY KEY,
           user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          portfolio_id INTEGER NOT NULL REFERENCES portfolios(id) ON DELETE CASCADE,
           date DATE NOT NULL,
           value TEXT NOT NULL,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -185,11 +198,14 @@ async function setupPostgreSQLSchema() {
       `);
 
       // Create indexes
-      await client.query(`CREATE INDEX IF NOT EXISTS idx_investments_user_date ON investments(user_id, date)`);
-      await client.query(`CREATE INDEX IF NOT EXISTS idx_investments_date ON investments(date)`);
       await client.query(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`);
+      await client.query(`CREATE INDEX IF NOT EXISTS idx_portfolios_user_id ON portfolios(user_id)`);
+      await client.query(`CREATE INDEX IF NOT EXISTS idx_portfolios_user_name ON portfolios(user_id, name)`);
+      await client.query(`CREATE INDEX IF NOT EXISTS idx_investments_user_id ON investments(user_id)`);
+      await client.query(`CREATE INDEX IF NOT EXISTS idx_investments_portfolio_id ON investments(portfolio_id)`);
+      await client.query(`CREATE INDEX IF NOT EXISTS idx_investments_date ON investments(date)`);
       await client.query(
-        `CREATE UNIQUE INDEX IF NOT EXISTS idx_investments_user_date_unique ON investments(user_id, date)`,
+        `CREATE UNIQUE INDEX IF NOT EXISTS idx_investments_portfolio_date_unique ON investments(portfolio_id, date)`,
       );
       await client.query(`CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token)`);
       await client.query(`CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)`);
@@ -216,6 +232,14 @@ async function setupPostgreSQLSchema() {
       `);
 
       await client.query(`
+        DROP TRIGGER IF EXISTS update_portfolios_updated_at ON portfolios;
+        CREATE TRIGGER update_portfolios_updated_at
+            BEFORE UPDATE ON portfolios
+            FOR EACH ROW
+            EXECUTE FUNCTION update_updated_at_column()
+      `);
+
+      await client.query(`
         DROP TRIGGER IF EXISTS update_investments_updated_at ON investments;
         CREATE TRIGGER update_investments_updated_at
             BEFORE UPDATE ON investments
@@ -234,15 +258,51 @@ async function setupPostgreSQLSchema() {
       // Create default dev user ONLY in explicit development mode
       if (dev && process.env.NODE_ENV === "development") {
         const defaultPassword = await bcrypt.hash("123456", 10);
-        await client.query(
+        const userResult = await client.query(
           `
           INSERT INTO users (email, password_hash, name)
           VALUES ($1, $2, $3)
           ON CONFLICT (email) DO NOTHING
+          RETURNING id
         `,
           ["admin@moneymonitor.com", defaultPassword, "Admin User"],
         );
-        console.log("Default user created: admin@moneymonitor.com / 123456");
+
+        if (userResult.rows.length > 0) {
+          const userId = userResult.rows[0].id;
+
+          // Create default portfolio for the user
+          await client.query(
+            `
+            INSERT INTO portfolios (user_id, name)
+            VALUES ($1, $2)
+            ON CONFLICT (user_id, name) DO NOTHING
+          `,
+            [userId, "Main Portfolio"],
+          );
+
+          console.log("Default user created: admin@moneymonitor.com / 123456");
+          console.log("Default portfolio 'Main Portfolio' created");
+        } else {
+          // User already exists, ensure they have a default portfolio
+          const existingUser = await client.query(
+            `SELECT id FROM users WHERE email = $1`,
+            ["admin@moneymonitor.com"]
+          );
+
+          if (existingUser.rows.length > 0) {
+            const userId = existingUser.rows[0].id;
+            await client.query(
+              `
+              INSERT INTO portfolios (user_id, name)
+              VALUES ($1, $2)
+              ON CONFLICT (user_id, name) DO NOTHING
+            `,
+              [userId, "Main Portfolio"],
+            );
+            console.log("Default user already exists, ensured default portfolio exists");
+          }
+        }
       }
 
       if (dev) console.log("PostgreSQL schema setup completed");

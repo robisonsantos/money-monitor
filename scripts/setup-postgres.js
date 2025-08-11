@@ -1,4 +1,4 @@
- mport { readFileSync } from 'fs';
+import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import pg from 'pg';
@@ -50,15 +50,43 @@ async function setupDatabase() {
       const defaultPassword = await bcrypt.hash('123456', 10);
 
       try {
-        await client.query(`
+        const userResult = await client.query(`
           INSERT INTO users (email, password_hash, name)
           VALUES ($1, $2, $3)
           ON CONFLICT (email) DO NOTHING
+          RETURNING id
         `, ['admin@moneymonitor.com', defaultPassword, 'Admin User']);
 
-        console.log('Default user created: admin@moneymonitor.com / 123456');
+        if (userResult.rows.length > 0) {
+          const userId = userResult.rows[0].id;
+
+          // Create default portfolio for the user
+          await client.query(`
+            INSERT INTO portfolios (user_id, name)
+            VALUES ($1, $2)
+            ON CONFLICT (user_id, name) DO NOTHING
+          `, [userId, 'Main Portfolio']);
+
+          console.log('Default user created: admin@moneymonitor.com / 123456');
+          console.log('Default portfolio "Main Portfolio" created');
+        } else {
+          // User already exists, ensure they have a default portfolio
+          const existingUser = await client.query(`
+            SELECT id FROM users WHERE email = $1
+          `, ['admin@moneymonitor.com']);
+
+          if (existingUser.rows.length > 0) {
+            const userId = existingUser.rows[0].id;
+            await client.query(`
+              INSERT INTO portfolios (user_id, name)
+              VALUES ($1, $2)
+              ON CONFLICT (user_id, name) DO NOTHING
+            `, [userId, 'Main Portfolio']);
+            console.log('Default user already exists, ensured default portfolio exists');
+          }
+        }
       } catch (error) {
-        console.log('Default user already exists or error creating:', error.message);
+        console.log('Default user setup error:', error.message);
       }
     }
 
