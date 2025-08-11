@@ -1,175 +1,199 @@
-# Migration System Cleanup Summary
+# Migration System Implementation Summary
 
-This document summarizes the migration system cleanup performed to simplify database management in the Money Monitor application.
+This document summarizes the implementation of a Rails-like migration system for the Money Monitor application.
 
-## What Was Removed
+## What Was Implemented
 
-### Migration Scripts
-- `scripts/migrate-portfolios.js` - Portfolio-specific migration
-- `scripts/migrate-portfolios.sql` - Portfolio migration SQL
-- `scripts/migrate-production.js` - Complex production migration system
-- `scripts/migrate-sqlite-to-postgres.js` - SQLite to PostgreSQL migration
-- `src/lib/migration.test.ts` - Tests for the old migration system
+### Rails-like Migration System
+- `migrations/` - Directory for timestamped SQL migration files
+- `scripts/migrate.js` - Migration runner with Rails-like functionality
+- `schema_migrations` table - Tracks executed migrations
+- Timestamped migration files (`YYYYMMDD_HHMMSS_description.sql`)
 
-### Package.json Scripts
-- `db:migrate` - SQLite to PostgreSQL migration
-- `db:migrate-portfolios` - Portfolio migration
-- `migrate:production` - Production migration system
-- Updated `build:netlify` and `build:preview` to remove migration dependencies
+### Migration Commands
+- `npm run migrate` - Run pending migrations
+- `npm run migrate:status` - Show migration status
+- `npm run migrate:create "description"` - Create new migration file
 
-## What Was Updated
+### Key Features
+- **Timestamped Files**: Each migration has unique timestamp ID
+- **Execution Tracking**: Migrations tracked in `schema_migrations` table
+- **Idempotent**: Safe to run multiple times
+- **Transaction Safety**: Each migration runs in transaction
+- **Automatic Discovery**: Finds and runs pending migrations in order
 
-### Database Schema Files
-Updated all schema files to include the `portfolios` table:
+## Migration Files
 
-- `scripts/init-db.sql` - Docker container initialization
-- `scripts/postgres-schema.sql` - Complete schema definition
-- `src/lib/database.ts` - Application bootstrap function
+### File Structure
+```
+migrations/
+├── README.md
+└── 20241210_000001_add_is_default_to_portfolios.sql
+```
 
-### Key Schema Changes
-- Added `portfolios` table with proper foreign keys
-- Updated `investments` table to include `portfolio_id` column
-- Changed unique constraint from `(user_id, date)` to `(portfolio_id, date)`
-- Added proper indexes for portfolio relationships
+### Naming Convention
+```
+YYYYMMDD_HHMMSS_description.sql
+```
 
-### Enhanced Setup Scripts
-- `scripts/setup-postgres.js` - Now creates default portfolios
-- `scripts/seed.js` - Already supported portfolios (no changes needed)
-- `src/lib/database.ts` - Bootstrap function creates portfolios table and default portfolio
+Example: `20241210_143022_add_user_preferences.sql`
 
-## New Approach: Automatic Schema Bootstrap
+### Migration Template
+```sql
+-- Migration: Description
+-- ID: 20241210_143022
+-- Description: Detailed explanation
+
+-- Migration SQL here
+ALTER TABLE example ADD COLUMN new_field VARCHAR(255);
+CREATE INDEX IF NOT EXISTS idx_example ON example(new_field);
+```
+
+## Implementation Details
+
+### Migration Runner (`scripts/migrate.js`)
+- Discovers migration files in `migrations/` directory
+- Creates `schema_migrations` table automatically
+- Tracks execution with ID, name, timestamp, checksum, and success status
+- Runs migrations in chronological order
+- Supports transaction rollback on failure
+
+### Database Integration
+- Bootstrap function in `database.ts` creates initial schema
+- Migration system handles subsequent schema changes
+- Automatic execution during application startup (future enhancement)
+
+### Portfolio System Migration
+- `20241210_000001_add_is_default_to_portfolios.sql` - Adds `is_default` column
+- Handles existing data by setting default portfolios intelligently
+- Uses partial unique index to allow multiple `false` values
+- Ensures each user has exactly one default portfolio
+
+## New Approach: Rails-like Migrations
 
 ### How It Works
-1. Application automatically detects missing tables on startup
-2. Creates complete schema if tables don't exist
-3. No manual migration commands needed
-4. Idempotent - safe to run multiple times
+1. Create migration file with timestamp: `npm run migrate:create "description"`
+2. Edit the generated SQL file with your changes
+3. Run migrations: `npm run migrate`
+4. System tracks execution in `schema_migrations` table
+5. Only pending migrations are executed
 
 ### Benefits
-- ✅ Simpler deployment process
-- ✅ No migration file management
-- ✅ Automatic schema creation in production
-- ✅ Easier development setup
-- ✅ Reduced complexity
+- ✅ **Version Control**: Database schema changes are versioned
+- ✅ **Team Collaboration**: Consistent schema across environments
+- ✅ **Rollback Safety**: Failed migrations don't corrupt database
+- ✅ **Audit Trail**: Complete history of schema changes
+- ✅ **Rails Familiarity**: Uses proven Rails migration patterns
 
-## New Files Added
+## Updated Files
 
-### Documentation
-- `DATABASE_SETUP.md` - Comprehensive database setup guide
-- `MIGRATION_CLEANUP.md` - This summary document
+### New Files
+- `migrations/README.md` - Migration system documentation
+- `migrations/20241210_000001_add_is_default_to_portfolios.sql` - Portfolio default column
+- `scripts/migrate.js` - Migration runner system
 
-### Validation
-- `scripts/validate-setup.js` - Database validation and health checks
-- Added `npm run db:validate` script
+### Updated Files
+- `package.json` - Added migration commands
+- `DATABASE_SETUP.md` - Updated with migration documentation
+- Portfolio-related files - Updated to use `is_default` flag instead of name
 
-## Updated Documentation
+### Database Schema Changes
+- Added `is_default` boolean column to `portfolios` table
+- Added partial unique index for default portfolios
+- Updated Portfolio interface to include `is_default` field
+- Enhanced portfolio management with default marking
 
-### NETLIFY_DEPLOYMENT.md
-- Removed references to deleted migration scripts
-- Updated deployment instructions for automatic schema bootstrap
-- Simplified manual database recovery procedures
+## Migration Commands Usage
 
-## How to Use the New System
-
-### Development Setup
+### Create New Migration
 ```bash
-# Start database
-npm run db:start
-
-# Run application (creates schema automatically)
-npm run dev
-
-# OR manually setup schema
-npm run db:setup
-
-# Add sample data
-npm run seed
-
-# Validate setup
-npm run db:validate
+npm run migrate:create "add user preferences"
+# Creates: migrations/20241210_143022_add_user_preferences.sql
 ```
 
-### Production Deployment
+### Run Pending Migrations
 ```bash
-# Just deploy - schema is created automatically
-git push origin main
+npm run migrate
+# Output:
+# 🚀 Starting migration run...
+# 📋 Found 1 pending migrations:
+#    • 20241210_143022_add_user_preferences
+# ✅ Migration completed: 20241210_143022_add_user_preferences
 ```
 
-No migration commands needed!
+### Check Migration Status
+```bash
+npm run migrate:status
+# Output:
+# 📊 Migration Status:
+# ID              | Name                    | Status    | Executed At
+# 20241210_143022 | add_user_preferences    | ✅ Success | 2024-12-10 14:30:45
+```
 
-## Migration Strategy for Future Changes
+## Migration Best Practices
+
+### Idempotent Operations
+```sql
+-- Good: Safe to run multiple times
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN;
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+
+-- Avoid: May fail on second run
+ALTER TABLE users ADD COLUMN email_verified BOOLEAN;
+```
+
+### Transaction Safety
+```sql
+-- Use transactions for complex changes
+BEGIN;
+ALTER TABLE users ADD COLUMN temp_field VARCHAR(255);
+UPDATE users SET temp_field = 'default';
+ALTER TABLE users ALTER COLUMN temp_field SET NOT NULL;
+COMMIT;
+```
+
+### Data Migrations
+```sql
+-- Handle existing data properly
+WITH default_candidates AS (
+  SELECT user_id, id, ROW_NUMBER() OVER (...) as rn
+  FROM portfolios WHERE is_default IS NULL
+)
+UPDATE portfolios SET is_default = (rn = 1)
+FROM default_candidates
+WHERE portfolios.user_id = default_candidates.user_id;
+```
+
+## Development Workflow
 
 ### For Schema Changes
-1. Update the bootstrap function in `src/lib/database.ts`
-2. Update schema files (`init-db.sql`, `postgres-schema.sql`)
-3. Deploy - changes apply automatically
+1. Create migration: `npm run migrate:create "description"`
+2. Edit the generated SQL file
+3. Test locally: `npm run migrate`
+4. Commit migration file
+5. Deploy - migrations run automatically
 
-### For Data Migrations
-If data transformation is needed:
-1. Add temporary migration logic to the bootstrap function
-2. Use conditional checks to run only once
-3. Remove the logic after successful deployment
-
-## Validation and Health Checks
-
-### New Validation Script
-Run `npm run db:validate` to check:
-- ✅ All required tables exist
-- ✅ Proper table structure
-- ✅ Foreign key constraints
-- ✅ Unique constraints
-- ✅ Indexes
-- ✅ Triggers
-- ✅ Data integrity
-
-### Example Output
-```
-🔍 Validating database setup...
-✅ Database connection
-✅ Table 'users' exists
-✅ Table 'portfolios' exists
-✅ Table 'investments' exists
-✅ Table 'sessions' exists
-...
-🎉 Database is HEALTHY
-```
-
-## Security and Performance
-
-### Maintained Features
-- ✅ All investment values remain encrypted
-- ✅ Foreign key constraints ensure data integrity
-- ✅ Optimized indexes for performance
-- ✅ Automatic timestamp updates via triggers
-- ✅ Secure session management
-
-### Portfolio System
-- ✅ Each user has a default "Main Portfolio"
-- ✅ Investments are linked to portfolios, not directly to users
-- ✅ Proper cascading deletes
-- ✅ Unique constraints prevent duplicate entries
+### For Production
+1. Deploy application with new migration files
+2. Run `npm run migrate` (or automatic on startup)
+3. Verify with `npm run migrate:status`
 
 ## Benefits Summary
 
-1. **Simplified Deployment**: No migration commands in build pipeline
-2. **Easier Development**: Automatic schema creation on first run
-3. **Reduced Complexity**: No migration file management
-4. **Better Reliability**: Idempotent bootstrap process
-5. **Improved Documentation**: Clear setup instructions
-6. **Validation Tools**: Easy health checking with `db:validate`
+1. **Rails-like Workflow**: Familiar migration pattern for developers
+2. **Version Control**: Database changes are tracked like code
+3. **Team Collaboration**: Consistent schema across all environments
+4. **Safety**: Transactions prevent partial migrations
+5. **Audit Trail**: Complete history of when changes were made
+6. **Flexibility**: Can handle both schema and data migrations
 
-## Breaking Changes
+## Future Enhancements
 
-### None for Existing Deployments
-- Existing databases continue to work
-- Bootstrap function detects existing tables
-- No data loss or migration required
-
-### For New Deployments
-- Schema is created automatically
-- Default portfolio system is in place
-- Investment data is properly linked to portfolios
+- Automatic migration execution on application startup
+- Migration rollback capabilities
+- Schema validation and drift detection
+- Integration with CI/CD pipelines
 
 ---
 
-This cleanup provides a much simpler and more reliable database management approach while maintaining all existing functionality and improving the developer experience.
+This migration system provides a professional, Rails-like approach to database schema management while maintaining safety and auditability.

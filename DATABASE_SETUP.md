@@ -4,7 +4,7 @@ This guide explains how to set up and manage the Money Monitor database.
 
 ## Overview
 
-Money Monitor uses PostgreSQL as its primary database. The application uses an **automatic schema bootstrap** approach instead of traditional migrations. When the application starts, it automatically creates the necessary database schema if it doesn't exist.
+Money Monitor uses PostgreSQL as its primary database. The application uses a **Rails-like migration system** with timestamped SQL files to manage database schema changes. Migrations are tracked in a `schema_migrations` table and run automatically when needed.
 
 ## Database Schema
 
@@ -29,18 +29,19 @@ npm run db:status
 
 ### 2. Initialize Database Schema
 
-The database schema is created automatically when you first run the application:
+The database schema is created automatically through migrations when you first run the application:
 
 ```bash
-# This will create tables automatically on first run
+# This will run migrations automatically on first run
 npm run dev
 ```
 
-Alternatively, you can manually set up the schema:
+Alternatively, you can manually set up the schema and run migrations:
 
 ```bash
-# Manual schema setup (optional)
+# Manual schema setup and migrations
 npm run db:setup
+npm run migrate
 ```
 
 ### 3. Seed Development Data
@@ -69,11 +70,12 @@ NODE_ENV=production
 
 ### Automatic Schema Creation
 
-The application automatically creates the database schema on startup if it doesn't exist. No manual migration commands are needed.
+The application automatically runs pending migrations on startup. For production deployments, you can also run migrations explicitly:
 
-1. Deploy your application
-2. The schema is created automatically on first request
-3. Ready to use!
+1. Deploy your application with migration files
+2. Run `npm run migrate` (optional - migrations run automatically)
+3. The application will have the latest schema
+4. Ready to use!
 
 ## Available Scripts
 
@@ -95,6 +97,19 @@ npm run db:connect
 npm run db:logs
 ```
 
+### Migrations
+
+```bash
+# Run pending migrations
+npm run migrate
+
+# Check migration status
+npm run migrate:status
+
+# Create new migration
+npm run migrate:create "description"
+```
+
 ### Development
 
 ```bash
@@ -110,35 +125,56 @@ npm run db:cleanup-sessions
 
 ## Database Files
 
+- `migrations/` - Database migration files (timestamped SQL files)
+- `scripts/migrate.js` - Migration runner system
 - `scripts/init-db.sql` - Docker container initialization
 - `scripts/postgres-schema.sql` - Complete schema definition  
 - `scripts/setup-postgres.js` - Development setup script
 - `scripts/seed.js` - Development data seeding
 - `src/lib/database.ts` - Application database interface
 
-## Schema Bootstrap Logic
+## Migration System
 
-The application uses `setupPostgreSQLSchema()` in `src/lib/database.ts` to:
+The application uses a Rails-like migration system with timestamped SQL files:
 
-1. Check if required tables exist
-2. Create missing tables with proper indexes and constraints
-3. Set up triggers for automatic `updated_at` timestamps
-4. Create a default development user (in development mode only)
+### Migration Files
+- Located in `migrations/` directory
+- Named with timestamp format: `YYYYMMDD_HHMMSS_description.sql`
+- Tracked in `schema_migrations` table
+- Run automatically in chronological order
 
-This happens automatically when the database connection pool is first used.
+### Migration Commands
+```bash
+# Create new migration
+npm run migrate:create "add user preferences"
 
-## Migration Strategy
+# Run pending migrations  
+npm run migrate
 
-**No Traditional Migrations**: This application doesn't use traditional migration files. Instead:
+# Check migration status
+npm run migrate:status
+```
 
-- Schema changes are made directly in the bootstrap function
-- The bootstrap is idempotent (safe to run multiple times)
-- New deployments automatically get the latest schema
+### How It Works
+1. Each migration file has a unique timestamp ID
+2. Executed migrations are recorded in `schema_migrations` table
+3. Only pending migrations are executed
+4. Migrations run in transaction for safety
+5. Failed migrations are recorded and must be fixed manually
 
-**For Major Schema Changes**:
-1. Update the bootstrap function in `database.ts`
-2. Update the schema files (`init-db.sql`, `postgres-schema.sql`)
-3. Deploy - schema updates happen automatically
+### Schema Bootstrap
+The application also uses `setupPostgreSQLSchema()` for initial setup:
+
+1. Creates core tables if they don't exist
+2. Runs pending migrations automatically
+3. Sets up triggers and basic constraints
+4. Creates default development user (in development mode only)
+
+**For Schema Changes**:
+1. Create a new migration file: `npm run migrate:create "description"`
+2. Add your SQL changes to the generated file
+3. Test locally, then deploy
+4. Migrations run automatically on deployment
 
 ## Troubleshooting
 
