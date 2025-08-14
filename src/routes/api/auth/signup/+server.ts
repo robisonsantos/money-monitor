@@ -1,7 +1,7 @@
+import { portfolioDb, sessionDb, userDb } from '$lib/database';
+import { authRateLimiter, createRateLimitResponse, getClientIdentifier } from '$lib/rateLimit';
+import { sanitizeEmail, sanitizeName, sanitizeText } from '$lib/sanitize';
 import { json } from '@sveltejs/kit';
-import { userDb, sessionDb } from '$lib/database';
-import { authRateLimiter, getClientIdentifier, createRateLimitResponse } from '$lib/rateLimit';
-import { sanitizeEmail, sanitizeText, sanitizeName } from '$lib/sanitize';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request, cookies }) => {
@@ -61,6 +61,9 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 
     // Successful registration - reset rate limit for this client
     authRateLimiter.reset(clientId);
+
+    // Create initial default portfolio for this account
+    await portfolioDb.createPortfolio(user.id, 'My Portfolio');
 
     // Generate secure session token
     const sessionToken = sessionDb.generateSessionToken();

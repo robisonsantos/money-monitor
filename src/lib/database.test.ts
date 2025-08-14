@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Set test environment to prevent development schema setup
 process.env.NODE_ENV = "test";
@@ -224,7 +224,7 @@ describe("investmentDb", () => {
       const mockPortfolio = { id: 1, user_id: TEST_USER_ID, name: "Main Portfolio", created_at: new Date() };
       mockClient.query.mockImplementation((query, params) => {
         const queryStr = typeof query === "string" ? query : query.text || "";
-        if (queryStr.includes("SELECT * FROM portfolios WHERE user_id = $1 AND name = $2")) {
+        if (queryStr.includes("SELECT * FROM portfolios WHERE user_id = $1 ORDER BY created_at ASC LIMIT 1")) {
           return Promise.resolve({ rows: [mockPortfolio] });
         }
         if (queryStr.includes("SELECT * FROM portfolios WHERE id = $1 AND user_id = $2")) {
@@ -294,7 +294,7 @@ describe("investmentDb", () => {
 
       mockClient.query.mockImplementation((query, params) => {
         const queryStr = typeof query === "string" ? query : query.text || "";
-        if (queryStr.includes("SELECT * FROM portfolios WHERE user_id = $1 AND name = $2")) {
+        if (queryStr.includes("SELECT * FROM portfolios WHERE user_id = $1 ORDER BY created_at ASC LIMIT 1")) {
           return Promise.resolve({ rows: [mockPortfolio] });
         }
         if (queryStr.includes("SELECT * FROM investments WHERE user_id = $1 AND portfolio_id = $2")) {
@@ -337,7 +337,7 @@ describe("investmentDb", () => {
 
       mockClient.query.mockImplementation((query, params) => {
         const queryStr = typeof query === "string" ? query : query.text || "";
-        if (queryStr.includes("SELECT * FROM portfolios WHERE user_id = $1 AND name = $2")) {
+        if (queryStr.includes("SELECT * FROM portfolios WHERE user_id = $1 ORDER BY created_at ASC LIMIT 1")) {
           return Promise.resolve({ rows: [mockPortfolio] });
         }
         if (queryStr.includes("SELECT * FROM investments WHERE user_id = $1 AND portfolio_id = $2")) {
@@ -357,7 +357,7 @@ describe("investmentDb", () => {
       const mockPortfolio = { id: 1, user_id: TEST_USER_ID, name: "Main Portfolio", created_at: new Date() };
       mockClient.query.mockImplementation((query, params) => {
         const queryStr = typeof query === "string" ? query : query.text || "";
-        if (queryStr.includes("SELECT * FROM portfolios WHERE user_id = $1 AND name = $2")) {
+        if (queryStr.includes("SELECT * FROM portfolios WHERE user_id = $1 ORDER BY created_at ASC LIMIT 1")) {
           return Promise.resolve({ rows: [mockPortfolio] });
         }
         return Promise.resolve({ rows: [] });
@@ -405,7 +405,7 @@ describe("investmentDb", () => {
 
       mockClient.query.mockImplementation((query, params) => {
         const queryStr = typeof query === "string" ? query : query.text || "";
-        if (queryStr.includes("SELECT * FROM portfolios WHERE user_id = $1 AND name = $2")) {
+        if (queryStr.includes("SELECT * FROM portfolios WHERE user_id = $1 ORDER BY created_at ASC LIMIT 1")) {
           return Promise.resolve({ rows: [mockPortfolio] });
         }
         if (queryStr.includes("SELECT * FROM investments WHERE user_id = $1 AND portfolio_id = $2")) {
@@ -425,7 +425,7 @@ describe("investmentDb", () => {
       const mockPortfolio = { id: 1, user_id: TEST_USER_ID, name: "Main Portfolio", created_at: new Date() };
       mockClient.query.mockImplementation((query, params) => {
         const queryStr = typeof query === "string" ? query : query.text || "";
-        if (queryStr.includes("SELECT * FROM portfolios WHERE user_id = $1 AND name = $2")) {
+        if (queryStr.includes("SELECT * FROM portfolios WHERE user_id = $1 ORDER BY created_at ASC LIMIT 1")) {
           return Promise.resolve({ rows: [mockPortfolio] });
         }
         return Promise.resolve({ rows: [] });
@@ -450,7 +450,7 @@ describe("investmentDb", () => {
 
       mockClient.query.mockImplementation((query, params) => {
         const queryStr = typeof query === "string" ? query : query.text || "";
-        if (queryStr.includes("SELECT * FROM portfolios WHERE user_id = $1 AND name = $2")) {
+        if (queryStr.includes("SELECT * FROM portfolios WHERE user_id = $1 ORDER BY created_at ASC LIMIT 1")) {
           return Promise.resolve({ rows: [mockPortfolio] });
         }
         if (queryStr.includes("SELECT * FROM portfolios WHERE id = $1 AND user_id = $2")) {
@@ -477,7 +477,7 @@ describe("investmentDb", () => {
         if (queryStr === "ROLLBACK") return Promise.resolve({ rows: [] });
         if (queryStr === "COMMIT") return Promise.resolve({ rows: [] });
 
-        if (queryStr.includes("SELECT * FROM portfolios WHERE user_id = $1 AND name = $2")) {
+        if (queryStr.includes("SELECT * FROM portfolios WHERE user_id = $1 ORDER BY created_at ASC LIMIT 1")) {
           return Promise.resolve({ rows: [mockPortfolio] });
         }
         if (queryStr.includes("SELECT * FROM portfolios WHERE id = $1 AND user_id = $2")) {

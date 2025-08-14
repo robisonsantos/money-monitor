@@ -1,6 +1,6 @@
-import { writable, derived } from "svelte/store";
 import { browser } from "$app/environment";
 import type { Portfolio } from "$lib/database";
+import { derived, writable } from "svelte/store";
 
 // Portfolio state management
 interface PortfolioState {
@@ -42,10 +42,10 @@ function createPortfolioStore() {
         const portfolios: Portfolio[] = await response.json();
 
         update((state) => {
-          // If no portfolio is selected, select the Main Portfolio or the first one
+          // If no portfolio is selected, select the first one
           let selectedPortfolio = state.selectedPortfolio;
           if (!selectedPortfolio && portfolios.length > 0) {
-            selectedPortfolio = portfolios.find((p) => p.name === "Main Portfolio") || portfolios[0];
+            selectedPortfolio = portfolios[0];
 
             // Store selected portfolio in localStorage
             if (selectedPortfolio) {
@@ -196,7 +196,7 @@ function createPortfolioStore() {
           // If the deleted portfolio was selected, select another one
           let newSelectedPortfolio = state.selectedPortfolio;
           if (state.selectedPortfolio?.id === portfolio.id) {
-            newSelectedPortfolio = newPortfolios.find((p) => p.name === "Main Portfolio") || newPortfolios[0] || null;
+            newSelectedPortfolio = newPortfolios[0] || null;
 
             // Update localStorage
             if (newSelectedPortfolio) {

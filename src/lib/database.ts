@@ -1,8 +1,8 @@
-import pg from "pg";
 import { dev } from "$app/environment";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 import dotenv from "dotenv";
+import pg from "pg";
 
 // Load environment variables explicitly
 dotenv.config();
@@ -278,11 +278,11 @@ async function setupPostgreSQLSchema() {
             VALUES ($1, $2)
             ON CONFLICT (user_id, name) DO NOTHING
           `,
-            [userId, "Main Portfolio"],
+            [userId, "My Portfolio"],
           );
 
           console.log("Default user created: admin@moneymonitor.com / 123456");
-          console.log("Default portfolio 'Main Portfolio' created");
+          console.log("Default portfolio 'My Portfolio' created");
         } else {
           // User already exists, ensure they have a default portfolio
           const existingUser = await client.query(
@@ -298,7 +298,7 @@ async function setupPostgreSQLSchema() {
               VALUES ($1, $2)
               ON CONFLICT (user_id, name) DO NOTHING
             `,
-              [userId, "Main Portfolio"],
+              [userId, "My Portfolio"],
             );
             console.log("Default user already exists, ensured default portfolio exists");
           }
@@ -607,28 +607,28 @@ export const portfolioDb = {
     }
   },
 
-  // Get default portfolio for user (Main Portfolio)
+  // Get default portfolio for user (first created portfolio)
   getDefaultPortfolio: async (userId: number): Promise<Portfolio | undefined> => {
     const client = await pool.connect();
     try {
-      const result = await client.query("SELECT * FROM portfolios WHERE user_id = $1 AND name = $2", [
-        userId,
-        "Main Portfolio",
-      ]);
+      const result = await client.query(
+        "SELECT * FROM portfolios WHERE user_id = $1 ORDER BY created_at ASC LIMIT 1",
+        [userId],
+      );
       return result.rows[0];
     } finally {
       client.release();
     }
   },
 
-  // Ensure user has a default portfolio
+  // Ensure user has a default portfolio (create one if none exists)
   ensureDefaultPortfolio: async (userId: number): Promise<Portfolio> => {
     const existing = await portfolioDb.getDefaultPortfolio(userId);
     if (existing) {
       return existing;
     }
 
-    return await portfolioDb.createPortfolio(userId, "Main Portfolio");
+    return await portfolioDb.createPortfolio(userId, "My Portfolio");
   },
 
   // Get portfolio with investment count

@@ -1,8 +1,8 @@
+import 'dotenv/config';
 import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import pg from 'pg';
-import 'dotenv/config';
+import { fileURLToPath } from 'url';
 
 const { Client } = pg;
 const __filename = fileURLToPath(import.meta.url);
@@ -65,10 +65,10 @@ async function setupDatabase() {
             INSERT INTO portfolios (user_id, name)
             VALUES ($1, $2)
             ON CONFLICT (user_id, name) DO NOTHING
-          `, [userId, 'Main Portfolio']);
+          `, [userId, 'My Portfolio']);
 
           console.log('Default user created: admin@moneymonitor.com / 123456');
-          console.log('Default portfolio "Main Portfolio" created');
+          console.log('Default portfolio "My Portfolio" created');
         } else {
           // User already exists, ensure they have a default portfolio
           const existingUser = await client.query(`
@@ -81,7 +81,7 @@ async function setupDatabase() {
               INSERT INTO portfolios (user_id, name)
               VALUES ($1, $2)
               ON CONFLICT (user_id, name) DO NOTHING
-            `, [userId, 'Main Portfolio']);
+            `, [userId, 'My Portfolio']);
             console.log('Default user already exists, ensured default portfolio exists');
           }
         }

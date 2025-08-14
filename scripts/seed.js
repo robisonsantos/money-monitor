@@ -1,9 +1,9 @@
-import { readFileSync } from "fs";
-import { format, eachDayOfInterval, startOfMonth, endOfMonth, isBefore, isAfter } from "date-fns";
-import pg from "pg";
-import crypto from "crypto";
 import bcrypt from "bcrypt";
+import crypto from "crypto";
+import { eachDayOfInterval, endOfMonth, format, isAfter, isBefore, startOfMonth } from "date-fns";
 import dotenv from "dotenv";
+import { readFileSync } from "fs";
+import pg from "pg";
 
 // Load environment variables
 dotenv.config();
@@ -17,9 +17,8 @@ const SEED_FILE = "./seed/seed_data.json";
 const ENCRYPTION_ALGORITHM = "aes-256-gcm";
 
 function getEncryptionKey() {
-  const key =
-    process.env.ENCRYPTION_KEY || "dev_key_32_bytes_for_local_development_only_never_use_in_production_123456";
-  return key;
+  // Must match src/lib/database.ts default for development to allow decryption
+  return process.env.ENCRYPTION_KEY || "your-32-byte-secret-key-here-for-dev!";
 }
 
 function getDerivedKey() {
@@ -103,29 +102,26 @@ async function seedDatabase() {
     // Create default user
     const userId = await createDefaultUser(pool);
 
-    // Ensure user has a "Main Portfolio" (for new portfolio system compatibility)
-    const portfolioResult = await pool.query(
-      `
-      INSERT INTO portfolios (user_id, name, created_at, updated_at)
-      VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-      ON CONFLICT (user_id, name) DO NOTHING
-      RETURNING id
-    `,
-      [userId, "Main Portfolio"],
-    );
-
+    // Ensure user has a portfolio: prefer any existing one, otherwise create a default
     let portfolioId;
-    if (portfolioResult.rows.length > 0) {
-      portfolioId = portfolioResult.rows[0].id;
-      console.log('✅ Created "Main Portfolio" for user');
+    const anyExisting = await pool.query(
+      `SELECT id, name FROM portfolios WHERE user_id = $1 ORDER BY created_at ASC LIMIT 1`,
+      [userId],
+    );
+    if (anyExisting.rows.length > 0) {
+      portfolioId = anyExisting.rows[0].id;
+      console.log(`👤 Using existing portfolio: ${anyExisting.rows[0].name}`);
     } else {
-      // Portfolio already exists, get its ID
-      const existingPortfolio = await pool.query("SELECT id FROM portfolios WHERE user_id = $1 AND name = $2", [
-        userId,
-        "Main Portfolio",
-      ]);
-      portfolioId = existingPortfolio.rows[0].id;
-      console.log('👤 Using existing "Main Portfolio"');
+      const portfolioResult = await pool.query(
+        `
+        INSERT INTO portfolios (user_id, name, created_at, updated_at)
+        VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        RETURNING id
+      `,
+        [userId, "My Portfolio"],
+      );
+      portfolioId = portfolioResult.rows[0].id;
+      console.log('✅ Created "My Portfolio" for user');
     }
 
     // Check if seed file exists

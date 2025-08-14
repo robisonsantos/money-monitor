@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { createEventDispatcher } from "svelte";
-  import { ChevronDown, Plus, Edit3, Trash2, Folder, Settings } from "lucide-svelte";
   import type { Portfolio } from "$lib/database";
+  import { ChevronDown, Edit3, Folder, Plus, Settings, Trash2 } from "lucide-svelte";
+  import { createEventDispatcher } from "svelte";
 
   interface Props {
     portfolios: Portfolio[];
@@ -236,7 +236,7 @@
                       >
                         <Edit3 class="w-4 h-4" />
                       </button>
-                      {#if portfolios.length > 1 && portfolio.name !== "Main Portfolio"}
+                     {#if portfolios.length > 1}
                         <button
                           onclick={(e) => {
                             e.stopPropagation();

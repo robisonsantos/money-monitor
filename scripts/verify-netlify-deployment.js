@@ -1,6 +1,5 @@
-import { readFileSync } from 'fs';
-import pg from 'pg';
 import dotenv from 'dotenv';
+import pg from 'pg';
 
 // Load environment variables
 dotenv.config();
@@ -179,17 +178,17 @@ async function validateDataIntegrity(pool) {
       expected: 0
     });
 
-    // Check for users without default portfolio
+    // Check for users without at least one portfolio
     const usersWithoutPortfolio = await pool.query(`
       SELECT COUNT(*) as count
       FROM users u
-      LEFT JOIN portfolios p ON u.id = p.user_id AND p.name = 'Main Portfolio'
+      LEFT JOIN portfolios p ON u.id = p.user_id
       WHERE p.id IS NULL
     `);
 
     const usersWithoutPortfolioCount = parseInt(usersWithoutPortfolio.rows[0].count);
     checks.push({
-      name: 'All users have default portfolio',
+      name: 'All users have at least one portfolio',
       status: usersWithoutPortfolioCount === 0 ? 'PASS' : 'FAIL',
       value: usersWithoutPortfolioCount,
       expected: 0
@@ -541,7 +540,7 @@ process.on('SIGTERM', async () => {
 });
 
 // Export for testing
-export { verifyDeployment, validateEnvironment, validateSchema, validateDataIntegrity };
+export { validateDataIntegrity, validateEnvironment, validateSchema, verifyDeployment };
 
 // Run verification if called directly
 if (import.meta.url === `file://${process.argv[1]}`) {

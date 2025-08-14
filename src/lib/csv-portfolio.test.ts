@@ -1,12 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { parseCSV, generateCSV } from "./utils";
+import { describe, expect, it } from "vitest";
 import type { Portfolio } from "./database";
+import { generateCSV, parseCSV } from "./utils";
 
 // Mock data for testing
 const mockPortfolio1: Portfolio = {
   id: 1,
   user_id: 1,
-  name: "Main Portfolio",
+  name: "My Portfolio",
   created_at: new Date("2024-01-01"),
 };
 
