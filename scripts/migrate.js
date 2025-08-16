@@ -156,6 +156,13 @@ class MigrationRunner {
         console.error(`❌ Migration failed: ${migration.id}_${migration.name}`);
         console.error(`   Error: ${migrationError.message}`);
 
+        // In production, provide more context for debugging
+        if (process.env.NODE_ENV === 'production') {
+          console.error(`   Migration file: ${migration.fullPath}`);
+          console.error(`   Stack trace: ${migrationError.stack}`);
+          console.error(`   Database: ${process.env.DATABASE_URL ? 'Connected via DATABASE_URL' : 'Local connection'}`);
+        }
+
         throw migrationError;
       }
 
@@ -192,6 +199,19 @@ class MigrationRunner {
         successCount++;
       } catch (error) {
         console.error(`💥 Migration pipeline stopped due to error in: ${migration.id}_${migration.name}`);
+
+        // In production, provide deployment guidance
+        if (process.env.NODE_ENV === 'production') {
+          console.error('\n🚨 PRODUCTION MIGRATION FAILURE');
+          console.error('This deployment has been aborted to prevent data corruption.');
+          console.error('Next steps:');
+          console.error('1. Review the migration SQL for syntax or constraint errors');
+          console.error('2. Fix the issue and create a new migration if needed');
+          console.error('3. Never modify executed migrations - always create new ones');
+          console.error('4. Test migrations locally before deploying');
+          console.error('\nFor help, see: migrations/README.md\n');
+        }
+
         throw error;
       }
     }
@@ -263,6 +283,12 @@ async function main() {
 
     const command = process.argv[2] || 'run';
 
+    // Show environment context in production
+    if (process.env.NODE_ENV === 'production') {
+      console.log('🏭 Running in PRODUCTION mode');
+      console.log(`📊 Database: ${process.env.DATABASE_URL ? 'External' : 'Local'}`);
+    }
+
     switch (command) {
       case 'run':
         await runner.runMigrations();
@@ -291,6 +317,14 @@ async function main() {
 
   } catch (error) {
     console.error('💥 Migration system error:', error.message);
+
+    if (process.env.NODE_ENV === 'production') {
+      console.error('\n🚨 PRODUCTION BUILD FAILED');
+      console.error('Migration error prevented deployment.');
+      console.error('Check Netlify build logs for details.');
+      console.error('Fix migrations and redeploy.\n');
+    }
+
     process.exit(1);
   } finally {
     await runner.close();

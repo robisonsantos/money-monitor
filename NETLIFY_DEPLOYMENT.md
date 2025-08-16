@@ -17,7 +17,8 @@ git push origin main
 # 2. Connect repo to Netlify and set environment variables:
 # ENCRYPTION_KEY, DATABASE_URL, NODE_ENV=production
 
-# 3. Deploy - migrations run automatically!
+# 3. Deploy - migrations run automatically during build!
+# Build logs will show migration status and any pending changes
 ```
 
 ---
@@ -200,27 +201,60 @@ CREATE TABLE schema_migrations (
    - Adds portfolio_id to investments
    - Migrates existing data to "Main Portfolio"
    - Maintains backward compatibility
+## 🔄 Database Migrations
+
+### Overview
+The application uses a Rails-like migration system with timestamped SQL files in the `migrations/` directory. **Migrations run automatically during every Netlify deployment** as part of the build process.
+
+### Migration System Features
+- **Automatic Execution**: Migrations run during `npm run build:netlify`
+- **Build Integration**: Migration status visible in Netlify build logs
+- **Safety**: Build fails if migrations fail, preventing broken deployments
+- **Tracking**: Executed migrations tracked in `schema_migrations` table
+- **Idempotent**: Safe to run multiple times
 
 ### Adding New Migrations
 
-To add a new migration:
+1. **Create migration file locally**:
+```bash
+npm run migrate:create "add user preferences"
+# Creates: migrations/20241210_143022_add_user_preferences.sql
+```
 
-1. **Create migration SQL file**:
+2. **Edit the generated migration file**:
 ```sql
--- scripts/new-feature.sql
-CREATE TABLE IF NOT EXISTS new_feature (
+-- Migration: Add user preferences
+-- ID: 20241210_143022
+-- Description: Add preferences table for user settings
+
+CREATE TABLE IF NOT EXISTS user_preferences (
   id SERIAL PRIMARY KEY,
-  user_id INTEGER NOT NULL REFERENCES users(id),
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  theme VARCHAR(20) DEFAULT 'light',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_user_preferences_user_id ON user_preferences(user_id);
 ```
 
-2. **Deploy**:
+3. **Deploy**:
 ```bash
-git push origin main  # Schema changes are handled automatically by the application
+git add migrations/
+git commit -m "feat: add user preferences table"
+git push origin main  # Migration runs automatically during build
 ```
 
-**Note**: The application now uses automatic schema bootstrap instead of explicit migrations. Database schema is created automatically when the application starts.
+### Migration Build Logs
+During deployment, you'll see migration output in Netlify build logs:
+```
+🔄 Initializing migration system...
+✅ Database connection verified
+🚀 Starting migration run...
+📋 Found 1 pending migrations:
+   • 20241210_143022_add_user_preferences
+✅ Migration completed: 20241210_143022_add_user_preferences
+🎉 Migration run completed!
+```
 
 ---
 
@@ -282,35 +316,48 @@ The system performs comprehensive health checks:
 **Solution**: Run the portfolio migration manually:
 ```bash
 # Connect to your database and run:
-UPDATE investments 
+UPDATE investments
 SET portfolio_id = (
-  SELECT id FROM portfolios 
-  WHERE user_id = investments.user_id 
+  SELECT id FROM portfolios
+  WHERE user_id = investments.user_id
   AND name = 'Main Portfolio'
-) 
+)
 WHERE portfolio_id IS NULL;
 ```
 
-### Manual Database Setup
+### Manual Migration Management
 
-If you need to manually verify or setup the database:
+If you need to manually check or manage migrations:
 
 ```bash
 # 1. Connect to your production database
 psql $DATABASE_URL
 
-# 2. Check current state
-\dt  -- List tables
+# 2. Check migration status
+SELECT id, name, executed_at, success FROM schema_migrations ORDER BY id;
 
-# 3. If tables are missing, restart the application
-# The application will automatically create the schema on startup
+# 3. Check pending migrations locally
+npm run migrate:status
 
-# 4. Verify schema is correct
+# 4. Verify current schema
 \d users
-\d investments
+\d investments  
 \d portfolios
 \d sessions
 ```
+
+### Migration Troubleshooting
+
+If a migration fails during deployment:
+
+1. **Check Netlify build logs** for specific migration error
+2. **Fix the migration SQL** and create a new migration file
+3. **Never modify executed migrations** - always create new ones
+4. **Test locally** before deploying:
+   ```bash
+   npm run migrate        # Run locally first
+   npm run migrate:status # Verify success
+   ```
 
 ### Rollback Strategy
 
@@ -450,7 +497,7 @@ graph TD
   D --> E[Deploy to CDN]
   E --> F[Health Check]
   F --> G[Deployment Complete]
-  
+
   C --> H[Migration Failed?]
   H --> I[Rollback & Alert]
 ```
