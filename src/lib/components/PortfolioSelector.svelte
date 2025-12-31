@@ -4,16 +4,27 @@
   import { createEventDispatcher } from "svelte";
 
   interface Props {
-    portfolios: Portfolio[];
-    selectedPortfolio: Portfolio | null;
-    isLoading?: boolean;
-    disabled?: boolean;
-  }
+      portfolios: Portfolio[];
+      selectedPortfolio: Portfolio | null;
+      selectedPortfolioId: number | null;
+      isLoading?: boolean;
+      disabled?: boolean;
+      showAllOption?: boolean;
+      isAllPortfoliosSelected?: boolean;
+    }
 
-  let { portfolios, selectedPortfolio, isLoading = false, disabled = false }: Props = $props();
+  let {
+    portfolios,
+    selectedPortfolio,
+    selectedPortfolioId,
+    isLoading = false,
+    disabled = false,
+    showAllOption = false,
+    isAllPortfoliosSelected = false
+  }: Props = $props();
 
   const dispatch = createEventDispatcher<{
-    select: Portfolio;
+    select: Portfolio | null;
     create: { name: string };
     rename: { portfolio: Portfolio; newName: string };
     delete: Portfolio;
@@ -37,7 +48,7 @@
     }
   }
 
-  function selectPortfolio(portfolio: Portfolio) {
+  function selectPortfolio(portfolio: Portfolio | null) {
     if (disabled) return;
 
     dispatch("select", portfolio);
@@ -147,6 +158,10 @@
           <div class="animate-pulse">
             <div class="h-4 bg-background-tertiary rounded w-24"></div>
           </div>
+        {:else if isAllPortfoliosSelected}
+          <span class="block text-sm font-medium text-foreground-primary truncate">
+            All Portfolios
+          </span>
         {:else if selectedPortfolio}
           <span class="block text-sm font-medium text-foreground-primary truncate">
             {selectedPortfolio.name}
@@ -168,6 +183,28 @@
       class="absolute z-50 w-full mt-1 bg-background-primary border border-border-primary rounded-lg shadow-lg dark:shadow-none dark:ring-1 dark:ring-white/10 dark:bg-gradient-to-br dark:from-slate-800/50 dark:to-slate-900/50 max-h-80 overflow-y-auto"
     >
       <div class="py-1">
+        <!-- All Portfolios option -->
+        {#if showAllOption}
+          <div class="group relative">
+            <div class="flex items-center {isAllPortfoliosSelected ? '' : 'hover:bg-background-secondary'}">
+              <button
+                onclick={() => selectPortfolio(null)}
+                class="flex-1 flex items-center px-3 py-2 text-sm cursor-pointer portfolio-item {isAllPortfoliosSelected ? 'selected' : ''}"
+                class:text-foreground-secondary={!isAllPortfoliosSelected}
+              >
+                <Folder class="w-4 h-4 mr-3 text-foreground-tertiary" />
+                <span class="truncate">All Portfolios</span>
+                {#if isAllPortfoliosSelected}
+                  <span class="ml-auto text-blue-600 dark:text-blue-400">✓</span>
+                {/if}
+              </button>
+            </div>
+          </div>
+
+          <!-- Divider between All Portfolios and individual portfolios -->
+          <div class="border-t border-border-secondary my-1"></div>
+        {/if}
+
         <!-- Existing portfolios -->
         {#each portfolios as portfolio (portfolio.id)}
           <div class="group relative">

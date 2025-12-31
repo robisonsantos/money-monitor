@@ -3,7 +3,7 @@
   import { TrendingUp, User, LogOut, BarChart3, Plus } from "lucide-svelte";
   import Breadcrumb from "$lib/components/Breadcrumb.svelte";
   import ThemeToggle from "$lib/components/ThemeToggle.svelte";
-  import { portfolioStore, selectedPortfolio } from "$lib/stores/portfolio";
+  import { portfolioStore, selectedPortfolio, isAllPortfoliosSelected } from "$lib/stores/portfolio";
   import { browser } from "$app/environment";
   import { onMount } from "svelte";
   import type { LayoutData } from "./$types";
@@ -87,7 +87,7 @@
   <main class="max-w-7xl mx-auto pt-4 sm:pt-6 pb-12 sm:px-6 lg:px-8">
     <div class="px-4 py-4 sm:py-6 sm:px-0">
       <!-- Breadcrumb Navigation -->
-      <Breadcrumb selectedPortfolio={$selectedPortfolio} />
+      <Breadcrumb selectedPortfolio={$selectedPortfolio} isAllPortfoliosSelected={$isAllPortfoliosSelected} />
 
       {@render children()}
     </div>

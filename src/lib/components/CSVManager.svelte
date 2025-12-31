@@ -7,11 +7,12 @@
     selectedPeriod: AggregationPeriod;
     selectedFilter: FilterPeriod;
     selectedPortfolio?: Portfolio | null;
+    isAllPortfoliosSelected?: boolean;
     onImportSuccess?: () => void;
     importOnly?: boolean; // Show only import button (for empty states)
   }
 
-  let { selectedPeriod, selectedFilter, selectedPortfolio, onImportSuccess, importOnly = false }: Props = $props();
+  let { selectedPeriod, selectedFilter, selectedPortfolio, isAllPortfoliosSelected = false, onImportSuccess, importOnly = false }: Props = $props();
 
   let fileInput: HTMLInputElement | undefined = $state();
   let isImporting = $state(false);
@@ -32,9 +33,19 @@
       const formData = new FormData();
       formData.append("file", file);
 
-      // Add portfolio ID if available
-      if (selectedPortfolio) {
+      // Add portfolio ID if available (not allowed when All Portfolios is selected)
+      if (selectedPortfolio && !isAllPortfoliosSelected) {
         formData.append("portfolioId", selectedPortfolio.id.toString());
+      }
+
+      // Check if we can import (must have a specific portfolio selected)
+      if (isAllPortfoliosSelected) {
+        importResult = {
+          success: false,
+          message: "Please select a specific portfolio to import data. You cannot import to the 'All Portfolios' view.",
+        };
+        isImporting = false;
+        return;
       }
 
       const response = await fetch("/api/investments/import", {
@@ -82,9 +93,16 @@
         filter: selectedFilter,
       });
 
-      // Add portfolio ID if available
-      if (selectedPortfolio) {
+      // Add portfolio ID if available (not allowed when All Portfolios is selected)
+      if (selectedPortfolio && !isAllPortfoliosSelected) {
         params.set("portfolioId", selectedPortfolio.id.toString());
+      }
+
+      // Check if we can export (must have a specific portfolio selected)
+      if (isAllPortfoliosSelected) {
+        alert("Please select a specific portfolio to export data. You cannot export from the 'All Portfolios' view.");
+        isExporting = false;
+        return;
       }
 
       const response = await fetch(`/api/investments/export?${params}`, {
@@ -133,23 +151,24 @@
   {#if !importOnly}
     <button
       onclick={handleExport}
-      disabled={isExporting}
-      class="btn-secondary flex items-center justify-center space-x-2 w-full sm:w-auto"
-      title="Export current filtered data to CSV"
+      disabled={isExporting || isAllPortfoliosSelected}
+      class="btn-secondary flex items-center justify-center space-x-2 w-full sm:w-auto {isAllPortfoliosSelected ? 'opacity-50 cursor-not-allowed' : ''}"
+      title={isAllPortfoliosSelected ? "Export not available in All Portfolios view. Select a specific portfolio." : "Export current filtered data to CSV"}
     >
       <Download class="w-4 h-4" />
-      <span>{isExporting ? "Exporting..." : "Export CSV"}</span>
+      <span>{isExporting ? "Exporting..." : isAllPortfoliosSelected ? "Export (Select Portfolio)" : "Export CSV"}</span>
     </button>
   {/if}
 
   <!-- Import Button -->
   <button
     onclick={() => (showImportDialog = true)}
-    class="btn-primary flex items-center justify-center space-x-2 w-full sm:w-auto"
-    title="Import investments from CSV file"
+    disabled={isAllPortfoliosSelected}
+    class="btn-primary flex items-center justify-center space-x-2 w-full sm:w-auto {isAllPortfoliosSelected ? 'opacity-50 cursor-not-allowed' : ''}"
+    title={isAllPortfoliosSelected ? "Import not available in All Portfolios view. Select a specific portfolio." : "Import investments from CSV file"}
   >
     <Upload class="w-4 h-4" />
-    <span>Import CSV</span>
+    <span>{isAllPortfoliosSelected ? "Import (Select Portfolio)" : "Import CSV"}</span>
   </button>
 </div>
 
@@ -167,8 +186,12 @@
       <div class="mb-4">
         <p class="text-sm text-foreground-secondary mb-3">
           Upload a CSV file with investment data. The file should have two columns: Date (YYYY-MM-DD) and Value.
-          {#if selectedPortfolio}
+          {#if isAllPortfoliosSelected}
+            <br /><span class="text-amber-600 dark:text-amber-400 font-medium">⚠️ Please select a specific portfolio to import data.</span>
+          {:else if selectedPortfolio}
             <br /><strong>Importing to:</strong> {selectedPortfolio.name}
+          {:else}
+            <br /><span class="text-amber-600 dark:text-amber-400 font-medium">⚠️ Please select a portfolio to import data.</span>
           {/if}
         </p>
 
@@ -194,9 +217,9 @@
           />
           <label
             for="csv-file-input"
-            class="cursor-pointer text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+            class="{isAllPortfoliosSelected ? 'cursor-not-allowed text-foreground-tertiary' : 'cursor-pointer text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300'} font-medium"
           >
-            {isImporting ? "Processing..." : "Choose CSV file"}
+            {isImporting ? "Processing..." : isAllPortfoliosSelected ? "Select Portfolio First" : "Choose CSV file"}
           </label>
           <p class="text-xs text-foreground-tertiary mt-1">Maximum file size: 5MB</p>
         </div>

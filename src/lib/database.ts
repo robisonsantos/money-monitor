@@ -20,11 +20,15 @@ function getEncryptionKey(): string {
     ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || "";
     if (!ENCRYPTION_KEY) {
       if (process.env.NODE_ENV === "production") {
-        throw new Error("ENCRYPTION_KEY environment variable is required in production");
+        throw new Error(
+          "ENCRYPTION_KEY environment variable is required in production",
+        );
       }
       // Use development key only in development
       ENCRYPTION_KEY = "your-32-byte-secret-key-here-for-dev!";
-      console.warn("⚠️  Using default encryption key for development. Set ENCRYPTION_KEY environment variable.");
+      console.warn(
+        "⚠️  Using default encryption key for development. Set ENCRYPTION_KEY environment variable.",
+      );
     }
   }
   return ENCRYPTION_KEY;
@@ -145,7 +149,11 @@ async function setupPostgreSQLSchema() {
       return;
     }
 
-    if (!existingTables.includes("users") || !existingTables.includes("portfolios") || !existingTables.includes("investments")) {
+    if (
+      !existingTables.includes("users") ||
+      !existingTables.includes("portfolios") ||
+      !existingTables.includes("investments")
+    ) {
       if (dev) console.log("Setting up PostgreSQL schema...");
 
       // Create users table
@@ -198,18 +206,36 @@ async function setupPostgreSQLSchema() {
       `);
 
       // Create indexes
-      await client.query(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`);
-      await client.query(`CREATE INDEX IF NOT EXISTS idx_portfolios_user_id ON portfolios(user_id)`);
-      await client.query(`CREATE INDEX IF NOT EXISTS idx_portfolios_user_name ON portfolios(user_id, name)`);
-      await client.query(`CREATE INDEX IF NOT EXISTS idx_investments_user_id ON investments(user_id)`);
-      await client.query(`CREATE INDEX IF NOT EXISTS idx_investments_portfolio_id ON investments(portfolio_id)`);
-      await client.query(`CREATE INDEX IF NOT EXISTS idx_investments_date ON investments(date)`);
+      await client.query(
+        `CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`,
+      );
+      await client.query(
+        `CREATE INDEX IF NOT EXISTS idx_portfolios_user_id ON portfolios(user_id)`,
+      );
+      await client.query(
+        `CREATE INDEX IF NOT EXISTS idx_portfolios_user_name ON portfolios(user_id, name)`,
+      );
+      await client.query(
+        `CREATE INDEX IF NOT EXISTS idx_investments_user_id ON investments(user_id)`,
+      );
+      await client.query(
+        `CREATE INDEX IF NOT EXISTS idx_investments_portfolio_id ON investments(portfolio_id)`,
+      );
+      await client.query(
+        `CREATE INDEX IF NOT EXISTS idx_investments_date ON investments(date)`,
+      );
       await client.query(
         `CREATE UNIQUE INDEX IF NOT EXISTS idx_investments_portfolio_date_unique ON investments(portfolio_id, date)`,
       );
-      await client.query(`CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token)`);
-      await client.query(`CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)`);
-      await client.query(`CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at)`);
+      await client.query(
+        `CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token)`,
+      );
+      await client.query(
+        `CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)`,
+      );
+      await client.query(
+        `CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at)`,
+      );
 
       // Create update trigger function
       await client.query(`
@@ -287,7 +313,7 @@ async function setupPostgreSQLSchema() {
           // User already exists, ensure they have a default portfolio
           const existingUser = await client.query(
             `SELECT id FROM users WHERE email = $1`,
-            ["admin@moneymonitor.com"]
+            ["admin@moneymonitor.com"],
           );
 
           if (existingUser.rows.length > 0) {
@@ -300,7 +326,9 @@ async function setupPostgreSQLSchema() {
             `,
               [userId, "My Portfolio"],
             );
-            console.log("Default user already exists, ensured default portfolio exists");
+            console.log(
+              "Default user already exists, ensured default portfolio exists",
+            );
           }
         }
       }
@@ -376,7 +404,11 @@ export interface Investment {
 
 export const userDb = {
   // Create a new user
-  createUser: async (email: string, password: string, name?: string): Promise<User> => {
+  createUser: async (
+    email: string,
+    password: string,
+    name?: string,
+  ): Promise<User> => {
     const client = await pool.connect();
     try {
       const passwordHash = await bcrypt.hash(password, 10);
@@ -391,10 +423,16 @@ export const userDb = {
   },
 
   // Authenticate user
-  authenticateUser: async (email: string, password: string): Promise<User | null> => {
+  authenticateUser: async (
+    email: string,
+    password: string,
+  ): Promise<User | null> => {
     const client = await pool.connect();
     try {
-      const result = await client.query("SELECT * FROM users WHERE email = $1", [email]);
+      const result = await client.query(
+        "SELECT * FROM users WHERE email = $1",
+        [email],
+      );
       const user = result.rows[0];
       if (!user) return null;
 
@@ -409,7 +447,10 @@ export const userDb = {
   getUserByEmail: async (email: string): Promise<User | undefined> => {
     const client = await pool.connect();
     try {
-      const result = await client.query("SELECT * FROM users WHERE email = $1", [email]);
+      const result = await client.query(
+        "SELECT * FROM users WHERE email = $1",
+        [email],
+      );
       return result.rows[0];
     } finally {
       client.release();
@@ -420,7 +461,9 @@ export const userDb = {
   getUserById: async (id: number): Promise<User | undefined> => {
     const client = await pool.connect();
     try {
-      const result = await client.query("SELECT * FROM users WHERE id = $1", [id]);
+      const result = await client.query("SELECT * FROM users WHERE id = $1", [
+        id,
+      ]);
       return result.rows[0];
     } finally {
       client.release();
@@ -430,7 +473,11 @@ export const userDb = {
 
 export const sessionDb = {
   // Create a new session
-  createSession: async (userId: number, token: string, expiresAt: Date): Promise<Session> => {
+  createSession: async (
+    userId: number,
+    token: string,
+    expiresAt: Date,
+  ): Promise<Session> => {
     const client = await pool.connect();
     try {
       const result = await client.query(
@@ -447,7 +494,10 @@ export const sessionDb = {
   getSession: async (token: string): Promise<Session | undefined> => {
     const client = await pool.connect();
     try {
-      const result = await client.query("SELECT * FROM sessions WHERE token = $1 AND expires_at > NOW()", [token]);
+      const result = await client.query(
+        "SELECT * FROM sessions WHERE token = $1 AND expires_at > NOW()",
+        [token],
+      );
       return result.rows[0];
     } finally {
       client.release();
@@ -455,13 +505,16 @@ export const sessionDb = {
   },
 
   // Update session expiration
-  updateSessionExpiration: async (token: string, expiresAt: Date): Promise<void> => {
+  updateSessionExpiration: async (
+    token: string,
+    expiresAt: Date,
+  ): Promise<void> => {
     const client = await pool.connect();
     try {
-      await client.query("UPDATE sessions SET expires_at = $1, updated_at = CURRENT_TIMESTAMP WHERE token = $2", [
-        expiresAt,
-        token,
-      ]);
+      await client.query(
+        "UPDATE sessions SET expires_at = $1, updated_at = CURRENT_TIMESTAMP WHERE token = $2",
+        [expiresAt, token],
+      );
     } finally {
       client.release();
     }
@@ -508,9 +561,10 @@ export const portfolioDb = {
   getUserPortfolios: async (userId: number): Promise<Portfolio[]> => {
     const client = await pool.connect();
     try {
-      const result = await client.query("SELECT * FROM portfolios WHERE user_id = $1 ORDER BY created_at ASC", [
-        userId,
-      ]);
+      const result = await client.query(
+        "SELECT * FROM portfolios WHERE user_id = $1 ORDER BY created_at ASC",
+        [userId],
+      );
       return result.rows;
     } finally {
       client.release();
@@ -518,13 +572,16 @@ export const portfolioDb = {
   },
 
   // Get a specific portfolio by ID (user-scoped)
-  getPortfolio: async (userId: number, portfolioId: number): Promise<Portfolio | undefined> => {
+  getPortfolio: async (
+    userId: number,
+    portfolioId: number,
+  ): Promise<Portfolio | undefined> => {
     const client = await pool.connect();
     try {
-      const result = await client.query("SELECT * FROM portfolios WHERE id = $1 AND user_id = $2", [
-        portfolioId,
-        userId,
-      ]);
+      const result = await client.query(
+        "SELECT * FROM portfolios WHERE id = $1 AND user_id = $2",
+        [portfolioId, userId],
+      );
       return result.rows[0];
     } finally {
       client.release();
@@ -532,10 +589,16 @@ export const portfolioDb = {
   },
 
   // Get portfolio by name (user-scoped)
-  getPortfolioByName: async (userId: number, name: string): Promise<Portfolio | undefined> => {
+  getPortfolioByName: async (
+    userId: number,
+    name: string,
+  ): Promise<Portfolio | undefined> => {
     const client = await pool.connect();
     try {
-      const result = await client.query("SELECT * FROM portfolios WHERE user_id = $1 AND name = $2", [userId, name]);
+      const result = await client.query(
+        "SELECT * FROM portfolios WHERE user_id = $1 AND name = $2",
+        [userId, name],
+      );
       return result.rows[0];
     } finally {
       client.release();
@@ -559,7 +622,11 @@ export const portfolioDb = {
   },
 
   // Update portfolio name
-  updatePortfolio: async (userId: number, portfolioId: number, name: string): Promise<Portfolio | null> => {
+  updatePortfolio: async (
+    userId: number,
+    portfolioId: number,
+    name: string,
+  ): Promise<Portfolio | null> => {
     const client = await pool.connect();
     try {
       const result = await client.query(
@@ -576,13 +643,17 @@ export const portfolioDb = {
   },
 
   // Delete a portfolio (only if it has no investments)
-  deletePortfolio: async (userId: number, portfolioId: number): Promise<boolean> => {
+  deletePortfolio: async (
+    userId: number,
+    portfolioId: number,
+  ): Promise<boolean> => {
     const client = await pool.connect();
     try {
       // Check if portfolio has investments
-      const investmentCheck = await client.query("SELECT COUNT(*) as count FROM investments WHERE portfolio_id = $1", [
-        portfolioId,
-      ]);
+      const investmentCheck = await client.query(
+        "SELECT COUNT(*) as count FROM investments WHERE portfolio_id = $1",
+        [portfolioId],
+      );
 
       const investmentCount = parseInt(investmentCheck.rows[0].count);
       if (investmentCount > 0) {
@@ -590,16 +661,20 @@ export const portfolioDb = {
       }
 
       // Check if it's the last portfolio for the user
-      const portfolioCheck = await client.query("SELECT COUNT(*) as count FROM portfolios WHERE user_id = $1", [
-        userId,
-      ]);
+      const portfolioCheck = await client.query(
+        "SELECT COUNT(*) as count FROM portfolios WHERE user_id = $1",
+        [userId],
+      );
 
       const portfolioCount = parseInt(portfolioCheck.rows[0].count);
       if (portfolioCount <= 1) {
         throw new Error("Cannot delete the last portfolio");
       }
 
-      const result = await client.query("DELETE FROM portfolios WHERE id = $1 AND user_id = $2", [portfolioId, userId]);
+      const result = await client.query(
+        "DELETE FROM portfolios WHERE id = $1 AND user_id = $2",
+        [portfolioId, userId],
+      );
 
       return result.rowCount > 0;
     } finally {
@@ -608,7 +683,9 @@ export const portfolioDb = {
   },
 
   // Get default portfolio for user (first created portfolio)
-  getDefaultPortfolio: async (userId: number): Promise<Portfolio | undefined> => {
+  getDefaultPortfolio: async (
+    userId: number,
+  ): Promise<Portfolio | undefined> => {
     const client = await pool.connect();
     try {
       const result = await client.query(
@@ -632,7 +709,10 @@ export const portfolioDb = {
   },
 
   // Get portfolio with investment count
-  getPortfolioWithStats: async (userId: number, portfolioId: number): Promise<any> => {
+  getPortfolioWithStats: async (
+    userId: number,
+    portfolioId: number,
+  ): Promise<any> => {
     const client = await pool.connect();
     try {
       const result = await client.query(
@@ -652,14 +732,28 @@ export const portfolioDb = {
 
 export const investmentDb = {
   // Add or update an investment (user-scoped) - backward compatible
-  addInvestment: async (userId: number, date: string, value: number): Promise<void> => {
+  addInvestment: async (
+    userId: number,
+    date: string,
+    value: number,
+  ): Promise<void> => {
     // Get user's default portfolio
     const defaultPortfolio = await portfolioDb.ensureDefaultPortfolio(userId);
-    return await investmentDb.addInvestmentToPortfolio(userId, defaultPortfolio.id, date, value);
+    return await investmentDb.addInvestmentToPortfolio(
+      userId,
+      defaultPortfolio.id,
+      date,
+      value,
+    );
   },
 
   // Add or update an investment to a specific portfolio
-  addInvestmentToPortfolio: async (userId: number, portfolioId: number, date: string, value: number): Promise<void> => {
+  addInvestmentToPortfolio: async (
+    userId: number,
+    portfolioId: number,
+    date: string,
+    value: number,
+  ): Promise<void> => {
     const client = await pool.connect();
     try {
       // Verify portfolio belongs to user
@@ -684,14 +778,22 @@ export const investmentDb = {
   },
 
   // Get investment by date (user-scoped) - decrypts value after retrieval
-  getInvestment: async (userId: number, date: string): Promise<Investment | undefined> => {
+  getInvestment: async (
+    userId: number,
+    date: string,
+  ): Promise<Investment | undefined> => {
     const client = await pool.connect();
     try {
-      const result = await client.query("SELECT * FROM investments WHERE user_id = $1 AND date = $2", [userId, date]);
+      const result = await client.query(
+        "SELECT * FROM investments WHERE user_id = $1 AND date = $2",
+        [userId, date],
+      );
       const investment = result.rows[0];
       if (investment) {
         investment.date =
-          investment.date instanceof Date ? investment.date.toISOString().split("T")[0] : investment.date;
+          investment.date instanceof Date
+            ? investment.date.toISOString().split("T")[0]
+            : investment.date;
         investment.value = decryptValue(investment.value);
       }
       return investment;
@@ -715,7 +817,9 @@ export const investmentDb = {
       const investment = result.rows[0];
       if (investment) {
         investment.date =
-          investment.date instanceof Date ? investment.date.toISOString().split("T")[0] : investment.date;
+          investment.date instanceof Date
+            ? investment.date.toISOString().split("T")[0]
+            : investment.date;
         investment.value = decryptValue(investment.value);
       }
       return investment;
@@ -728,11 +832,17 @@ export const investmentDb = {
   getAllInvestments: async (userId: number): Promise<Investment[]> => {
     const defaultPortfolio = await portfolioDb.getDefaultPortfolio(userId);
     if (!defaultPortfolio) return [];
-    return await investmentDb.getAllInvestmentsFromPortfolio(userId, defaultPortfolio.id);
+    return await investmentDb.getAllInvestmentsFromPortfolio(
+      userId,
+      defaultPortfolio.id,
+    );
   },
 
   // Get all investments from specific portfolio
-  getAllInvestmentsFromPortfolio: async (userId: number, portfolioId: number): Promise<Investment[]> => {
+  getAllInvestmentsFromPortfolio: async (
+    userId: number,
+    portfolioId: number,
+  ): Promise<Investment[]> => {
     const client = await pool.connect();
     try {
       const result = await client.query(
@@ -741,7 +851,10 @@ export const investmentDb = {
       );
       return result.rows.map((investment) => ({
         ...investment,
-        date: investment.date instanceof Date ? investment.date.toISOString().split("T")[0] : investment.date,
+        date:
+          investment.date instanceof Date
+            ? investment.date.toISOString().split("T")[0]
+            : investment.date,
         value: decryptValue(investment.value),
       }));
     } finally {
@@ -750,10 +863,19 @@ export const investmentDb = {
   },
 
   // Get investments in date range (user-scoped) - backward compatible
-  getInvestmentsInRange: async (userId: number, startDate: string, endDate: string): Promise<Investment[]> => {
+  getInvestmentsInRange: async (
+    userId: number,
+    startDate: string,
+    endDate: string,
+  ): Promise<Investment[]> => {
     const defaultPortfolio = await portfolioDb.getDefaultPortfolio(userId);
     if (!defaultPortfolio) return [];
-    return await investmentDb.getInvestmentsInRangeFromPortfolio(userId, defaultPortfolio.id, startDate, endDate);
+    return await investmentDb.getInvestmentsInRangeFromPortfolio(
+      userId,
+      defaultPortfolio.id,
+      startDate,
+      endDate,
+    );
   },
 
   // Get investments in date range from specific portfolio
@@ -771,7 +893,10 @@ export const investmentDb = {
       );
       return result.rows.map((investment) => ({
         ...investment,
-        date: investment.date instanceof Date ? investment.date.toISOString().split("T")[0] : investment.date,
+        date:
+          investment.date instanceof Date
+            ? investment.date.toISOString().split("T")[0]
+            : investment.date,
         value: decryptValue(investment.value),
       }));
     } finally {
@@ -783,11 +908,19 @@ export const investmentDb = {
   deleteInvestment: async (userId: number, date: string): Promise<boolean> => {
     const defaultPortfolio = await portfolioDb.getDefaultPortfolio(userId);
     if (!defaultPortfolio) return false;
-    return await investmentDb.deleteInvestmentFromPortfolio(userId, defaultPortfolio.id, date);
+    return await investmentDb.deleteInvestmentFromPortfolio(
+      userId,
+      defaultPortfolio.id,
+      date,
+    );
   },
 
   // Delete investment from specific portfolio
-  deleteInvestmentFromPortfolio: async (userId: number, portfolioId: number, date: string): Promise<boolean> => {
+  deleteInvestmentFromPortfolio: async (
+    userId: number,
+    portfolioId: number,
+    date: string,
+  ): Promise<boolean> => {
     const client = await pool.connect();
     try {
       const result = await client.query(
@@ -801,16 +934,21 @@ export const investmentDb = {
   },
 
   // Get latest investment (user-scoped) - decrypts value after retrieval
-  getLatestInvestment: async (userId: number): Promise<Investment | undefined> => {
+  getLatestInvestment: async (
+    userId: number,
+  ): Promise<Investment | undefined> => {
     const client = await pool.connect();
     try {
-      const result = await client.query("SELECT * FROM investments WHERE user_id = $1 ORDER BY date DESC LIMIT 1", [
-        userId,
-      ]);
+      const result = await client.query(
+        "SELECT * FROM investments WHERE user_id = $1 ORDER BY date DESC LIMIT 1",
+        [userId],
+      );
       const investment = result.rows[0];
       if (investment) {
         investment.date =
-          investment.date instanceof Date ? investment.date.toISOString().split("T")[0] : investment.date;
+          investment.date instanceof Date
+            ? investment.date.toISOString().split("T")[0]
+            : investment.date;
         investment.value = decryptValue(investment.value);
       }
       return investment;
@@ -820,10 +958,19 @@ export const investmentDb = {
   },
 
   // Get investments with pagination (newest first, user-scoped) - backward compatible
-  getInvestmentsPaginated: async (userId: number, limit: number, offset: number): Promise<Investment[]> => {
+  getInvestmentsPaginated: async (
+    userId: number,
+    limit: number,
+    offset: number,
+  ): Promise<Investment[]> => {
     const defaultPortfolio = await portfolioDb.getDefaultPortfolio(userId);
     if (!defaultPortfolio) return [];
-    return await investmentDb.getInvestmentsPaginatedFromPortfolio(userId, defaultPortfolio.id, limit, offset);
+    return await investmentDb.getInvestmentsPaginatedFromPortfolio(
+      userId,
+      defaultPortfolio.id,
+      limit,
+      offset,
+    );
   },
 
   // Get investments with pagination from specific portfolio
@@ -841,7 +988,10 @@ export const investmentDb = {
       );
       return result.rows.map((investment) => ({
         ...investment,
-        date: investment.date instanceof Date ? investment.date.toISOString().split("T")[0] : investment.date,
+        date:
+          investment.date instanceof Date
+            ? investment.date.toISOString().split("T")[0]
+            : investment.date,
         value: decryptValue(investment.value),
       }));
     } finally {
@@ -850,7 +1000,10 @@ export const investmentDb = {
   },
 
   // Get investment with previous value for change calculation (user-scoped) - decrypts values after retrieval
-  getInvestmentWithPrevious: async (userId: number, date: string): Promise<any> => {
+  getInvestmentWithPrevious: async (
+    userId: number,
+    date: string,
+  ): Promise<any> => {
     const client = await pool.connect();
     try {
       const result = await client.query(
@@ -871,9 +1024,12 @@ export const investmentDb = {
       const investment = result.rows[0];
       if (investment) {
         investment.date =
-          investment.date instanceof Date ? investment.date.toISOString().split("T")[0] : investment.date;
+          investment.date instanceof Date
+            ? investment.date.toISOString().split("T")[0]
+            : investment.date;
         if (investment.value) investment.value = decryptValue(investment.value);
-        if (investment.prev_value) investment.prev_value = decryptValue(investment.prev_value);
+        if (investment.prev_value)
+          investment.prev_value = decryptValue(investment.prev_value);
       }
       return investment;
     } finally {
@@ -885,14 +1041,23 @@ export const investmentDb = {
   clearAllInvestments: async (userId: number): Promise<void> => {
     const defaultPortfolio = await portfolioDb.getDefaultPortfolio(userId);
     if (!defaultPortfolio) return;
-    return await investmentDb.clearAllInvestmentsFromPortfolio(userId, defaultPortfolio.id);
+    return await investmentDb.clearAllInvestmentsFromPortfolio(
+      userId,
+      defaultPortfolio.id,
+    );
   },
 
   // Clear all investments from specific portfolio
-  clearAllInvestmentsFromPortfolio: async (userId: number, portfolioId: number): Promise<void> => {
+  clearAllInvestmentsFromPortfolio: async (
+    userId: number,
+    portfolioId: number,
+  ): Promise<void> => {
     const client = await pool.connect();
     try {
-      await client.query("DELETE FROM investments WHERE user_id = $1 AND portfolio_id = $2", [userId, portfolioId]);
+      await client.query(
+        "DELETE FROM investments WHERE user_id = $1 AND portfolio_id = $2",
+        [userId, portfolioId],
+      );
     } finally {
       client.release();
     }
@@ -904,7 +1069,11 @@ export const investmentDb = {
     investments: Array<{ date: string; value: number }>,
   ): Promise<number> => {
     const defaultPortfolio = await portfolioDb.ensureDefaultPortfolio(userId);
-    return await investmentDb.bulkInsertInvestmentsToPortfolio(userId, defaultPortfolio.id, investments);
+    return await investmentDb.bulkInsertInvestmentsToPortfolio(
+      userId,
+      defaultPortfolio.id,
+      investments,
+    );
   },
 
   // Bulk insert investments to specific portfolio
@@ -949,7 +1118,10 @@ export const investmentDb = {
   },
 
   // Get recent investments with previous values in a single efficient query
-  getRecentInvestmentsWithChanges: async (userId: number, limit: number = 20): Promise<any[]> => {
+  getRecentInvestmentsWithChanges: async (
+    userId: number,
+    limit: number = 20,
+  ): Promise<any[]> => {
     const client = await pool.connect();
     try {
       const result = await client.query(
@@ -967,14 +1139,23 @@ export const investmentDb = {
 
       return result.rows.map((investment) => {
         const decryptedValue = decryptValue(investment.value);
-        const decryptedPrevValue = investment.prev_value ? decryptValue(investment.prev_value) : null;
+        const decryptedPrevValue = investment.prev_value
+          ? decryptValue(investment.prev_value)
+          : null;
 
-        const change = decryptedPrevValue ? decryptedValue - decryptedPrevValue : 0;
-        const changePercent = decryptedPrevValue ? (change / decryptedPrevValue) * 100 : 0;
+        const change = decryptedPrevValue
+          ? decryptedValue - decryptedPrevValue
+          : 0;
+        const changePercent = decryptedPrevValue
+          ? (change / decryptedPrevValue) * 100
+          : 0;
 
         return {
           ...investment,
-          date: investment.date instanceof Date ? investment.date.toISOString().split("T")[0] : investment.date,
+          date:
+            investment.date instanceof Date
+              ? investment.date.toISOString().split("T")[0]
+              : investment.date,
           value: decryptedValue,
           prev_value: decryptedPrevValue,
           change,
@@ -986,10 +1167,156 @@ export const investmentDb = {
     }
   },
 
-  // Close database connection
-  close: async (): Promise<void> => {
-    await pool.end();
+  // Get aggregated investments across all portfolios for a user
+  getAggregatedInvestments: async (userId: number) => {
+    const client = await pool.connect();
+    try {
+      // Get all portfolios for the user
+      const portfoliosResult = await client.query(
+        "SELECT * FROM portfolios WHERE user_id = $1 ORDER BY created_at ASC",
+        [userId],
+      );
+      const portfolios = portfoliosResult.rows;
+
+      if (portfolios.length === 0) {
+        return [];
+      }
+
+      // Get all investments from all portfolios
+      const portfolioIds = portfolios.map((p) => p.id);
+      const investmentsResult = await client.query(
+        `SELECT i.*, p.name as portfolio_name
+         FROM investments i
+         JOIN portfolios p ON i.portfolio_id = p.id
+         WHERE i.user_id = $1 AND i.portfolio_id = ANY($2)
+         ORDER BY i.date ASC`,
+        [userId, portfolioIds],
+      );
+
+      const allInvestments = investmentsResult.rows.map((investment) => ({
+        ...investment,
+        date:
+          investment.date instanceof Date
+            ? investment.date.toISOString().split("T")[0]
+            : investment.date,
+        value: decryptValue(investment.value),
+        original_portfolio_id: investment.portfolio_id,
+        portfolio_name: investment.portfolio_name,
+      }));
+
+      // Aggregate investments by date
+      const aggregatedMap = new Map();
+      const currentDate = new Date().toISOString().split("T")[0];
+
+      for (const investment of allInvestments) {
+        if (!aggregatedMap.has(investment.date)) {
+          aggregatedMap.set(investment.date, {
+            id: Math.floor(Math.random() * 1000000), // Generate temporary ID
+            user_id: userId,
+            portfolio_id: null, // Special marker for aggregated data
+            date: investment.date,
+            value: 0,
+            created_at: currentDate,
+            portfolio_count: portfolios.length,
+            portfolio_breakdown: [],
+          });
+        }
+
+        const aggregated = aggregatedMap.get(investment.date);
+        aggregated.value += investment.value;
+
+        // Track portfolio breakdown
+        const portfolioIndex = aggregated.portfolio_breakdown.findIndex(
+          (pb) => pb.portfolio_id === investment.original_portfolio_id,
+        );
+
+        if (portfolioIndex === -1) {
+          aggregated.portfolio_breakdown.push({
+            portfolio_id: investment.original_portfolio_id,
+            value: investment.value,
+            name: investment.portfolio_name,
+          });
+        } else {
+          aggregated.portfolio_breakdown[portfolioIndex].value +=
+            investment.value;
+        }
+      }
+
+      const aggregatedInvestments = Array.from(aggregatedMap.values());
+
+      // Sort portfolio_breakdown by portfolio_id for consistency
+      aggregatedInvestments.forEach((aggregated) => {
+        aggregated.portfolio_breakdown.sort(
+          (a, b) => a.portfolio_id - b.portfolio_id,
+        );
+      });
+
+      return aggregatedInvestments;
+    } finally {
+      client.release();
+    }
   },
+
+  // Get aggregated portfolio statistics
+  getAggregatedPortfolioStats: async (userId: number) => {
+    const client = await pool.connect();
+    try {
+      // Get all portfolios for the user
+      const portfoliosResult = await client.query(
+        "SELECT * FROM portfolios WHERE user_id = $1 ORDER BY created_at ASC",
+        [userId],
+      );
+      const portfolios = portfoliosResult.rows;
+
+      if (portfolios.length === 0) {
+        return {
+          totalPortfolios: 0,
+          averagePortfolioValue: 0,
+          portfolioValues: [],
+        };
+      }
+
+      // Get all investments from all portfolios
+      const portfolioIds = portfolios.map((p) => p.id);
+      const investmentsResult = await client.query(
+        `SELECT i.*, p.name as portfolio_name
+         FROM investments i
+         JOIN portfolios p ON i.portfolio_id = p.id
+         WHERE i.user_id = $1 AND i.portfolio_id = ANY($2)
+         ORDER BY i.date DESC
+         LIMIT ${portfolios.length}`, // Get latest investment from each portfolio
+        [userId, portfolioIds],
+      );
+
+      const latestInvestments = investmentsResult.rows.map((investment) => ({
+        ...investment,
+        value: decryptValue(investment.value),
+      }));
+
+      const portfolioValues = latestInvestments.map((investment) => ({
+        portfolio_id: investment.portfolio_id,
+        portfolio_name: investment.portfolio_name,
+        value: investment.value,
+      }));
+
+      const totalValue = portfolioValues.reduce((sum, p) => sum + p.value, 0);
+      const averagePortfolioValue =
+        portfolioValues.length > 0 ? totalValue / portfolioValues.length : 0;
+
+      return {
+        totalPortfolios: portfolios.length,
+        averagePortfolioValue,
+        portfolioValues,
+      };
+    } finally {
+      client.release();
+    }
+  },
+};
+
+// Module-level database connection management
+export const closeDatabase = async (): Promise<void> => {
+  await pool.end();
 };
 
 // Export migration function for testing

@@ -5,9 +5,10 @@
 
   interface Props {
     selectedPortfolio?: Portfolio | null;
+    isAllPortfoliosSelected?: boolean;
   }
 
-  let { selectedPortfolio }: Props = $props();
+  let { selectedPortfolio, isAllPortfoliosSelected = false }: Props = $props();
 
   // Check if we're in edit mode based on URL parameters
   let isEditMode = $derived(() => {
@@ -36,14 +37,14 @@
     </li>
 
     <!-- Portfolio context -->
-    {#if selectedPortfolio}
+    {#if selectedPortfolio || isAllPortfoliosSelected}
       <li class="inline-flex items-center">
         <ChevronRight class="w-4 h-4 text-foreground-tertiary mx-1 md:mx-2" />
         {#if $page.url.pathname === "/dashboard"}
           <span class="inline-flex items-center space-x-1 font-medium text-foreground-secondary">
             <Folder class="w-4 h-4 text-blue-600 dark:text-blue-400" />
             <div class="flex flex-col">
-              <span>{selectedPortfolio.name}</span>
+              <span>{isAllPortfoliosSelected ? "All Portfolios" : selectedPortfolio?.name}</span>
             </div>
           </span>
         {:else}
@@ -53,7 +54,7 @@
           >
             <Folder class="w-4 h-4 text-blue-600 dark:text-blue-400" />
             <div class="flex flex-col">
-              <span>{selectedPortfolio.name}</span>
+              <span>{isAllPortfoliosSelected ? "All Portfolios" : selectedPortfolio?.name}</span>
             </div>
           </a>
         {/if}
